@@ -1,9 +1,15 @@
+-- GLOBAL METHODS
 function Set (list) -- HOW is a set not native !!!!!!!
   local set = {}
   for _, l in ipairs(list) do set[l] = true end
   return set
 end
 
+-- GLOBAL VARIABLES
+infantryGoups = {}
+
+
+-- LOCAL METHODS
 function inListTroops(unitType) -- String with unit type
 	local troops = Set { "Soldier M249", "Soldier M4", "Stinger comm", "Soldier stinger","Infantry AK","Paratrooper AKS-74",
 		"SA-18 Igla comm","SA-18 Igla manpad","SA-18 Igla-S manpad","SA-18 Igla-S comm" }
@@ -26,6 +32,8 @@ function isGroupInfantryOnly(group)
 	return true
 end
 
+--MAIN TEXT
+
 env.setErrorMessageBoxEnabled(false)
 trigger.action.outText("Search for groups", 2)
 
@@ -36,6 +44,7 @@ for i, gp in pairs(coalition.getGroups(1)) do
 	trigger.action.outText(Group.getName(gp), 10 )
 	if isGroupInfantryOnly(gp) then
 		trigger.action.outText(" OK   " .. Group.getName(gp), 10 )
+		table.insert(infantryGoups,gp)
 	else
 		trigger.action.outText(" NOPE " .. Group.getName(gp), 10 )
 	end
@@ -47,7 +56,13 @@ for i, gp in pairs(coalition.getGroups(2)) do
 	trigger.action.outText(Group.getName(gp), 10)
 	if isGroupInfantryOnly(gp) then
 		trigger.action.outText(" OK   " .. Group.getName(gp), 10 )
+		table.insert(infantryGoups,gp)
 	else
 		trigger.action.outText(" NOPE " .. Group.getName(gp), 10 )
 	end
+end
+
+-- checking
+for _, group in ipairs(infantryGoups) do
+	trigger.action.outText("Saved group " .. Group.getName(group), 15 )
 end
