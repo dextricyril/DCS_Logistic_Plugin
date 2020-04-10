@@ -5,6 +5,16 @@ function Set (list) -- HOW is a set not native !!!!!!!
   return set
 end
 
+-- get distance between two units (objects seem to work as well)
+function getDistance(unit1, unit2)
+	unit1Position = unit1.getPosition(unit1).p
+	unit2Position = unit2.getPosition(unit2).p
+	xDiff = unit1Position.x - unit2Position.x
+	yDiff = unit1Position.y - unit2Position.y
+	zDiff = unit1Position.z - unit2Position.z
+	return (xDiff^2 + yDiff^2 + zDiff^2)^0.5 
+end
+
 -- GLOBAL VARIABLES
 infantryGoups = {}
 
