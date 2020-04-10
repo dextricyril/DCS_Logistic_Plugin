@@ -6,7 +6,41 @@ function Set (list) -- HOW is a set not native !!!!!!!
 end
 --GLOBAL LIST OF PLAYABLE HELICOPTER UNIT
 
+-- Helicopter class
+HelicoPlayer = {}
+
+
+-- Derived class method new
+function HelicoPlayer:new(o,unit)
+   o = {}
+   setmetatable(o, self)
+   self.__index = self
+   self.unit=unit
+   troopInside = {}
+   return o
+end
+
+-- Derived class method 
+
+function HelicoPlayer:getMaxTroop()
+	strType = Unit.getTypeName(self.unit)
+	if strType == "Ka-50" then return 0 end
+	if strType == "Mi-8MT" then return 24 end
+	if strType == "UH-1H" then return 10 end
+	return 3 -- SA342L
+end
+
+function HelicoPlayer:print()
+   env.info("The name of the pilot" .. Unit.getName(self.unit))
+   env.info("The type of chopper " .. Unit.getTypeName(self.unit) )
+   trigger.action.outText("The name of the pilot" .. Unit.getName(self.unit) .. " MAX troop " .. self:getMaxTroop() , 5 )
+   trigger.action.outText("The type of chopper " .. Unit.getTypeName(self.unit) , 5)
+end
+
+
 chopperList = {}
+
+
 
 function ckeckIfStillAlive()
 	timer.scheduleFunction(ckeckIfStillAlive, nil, timer.getTime() + 4)
@@ -36,6 +70,9 @@ function savePlayerChopper(group)
 			if notHere then
 				env.info("ADDING   " .. Unit.getName(unit))
 				table.insert(chopperList,Unit.getName(unit))
+				env.info("CREATING CHOPPER OBJECT ")
+				helico = HelicoPlayer:new(nil,unit)
+				helico.print(helico)
 			end
 		end
 	end
