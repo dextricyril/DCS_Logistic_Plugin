@@ -46,7 +46,7 @@ function checkingNewPilot()
 	--Looking for red helicopter group
 	trigger.action.outText("red", 2 )
 	for i, gp in pairs(coalition.getGroups(1)) do
-		trigger.action.outText(Group.getName(gp), 10 )
+		--trigger.action.outText(Group.getName(gp), 10 )
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
 			savePlayerChopper(gp)
@@ -56,7 +56,7 @@ function checkingNewPilot()
 	--Looking for blue groups
 	trigger.action.outText("blue", 2 )
 	for i, gp in pairs(coalition.getGroups(2)) do
-		trigger.action.outText(Group.getName(gp), 10)
+		--trigger.action.outText(Group.getName(gp), 10)
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
 			savePlayerChopper(gp)
