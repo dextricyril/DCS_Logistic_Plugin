@@ -117,11 +117,17 @@ function HelicoPlayer:inAir()
 end
 
 function HelicoPlayer:update()
+	env.info("updateHelico")
 	env.info("updateHelico" .. tostring(self:inAir()))
-	if self:inAir() and self.commMenuDone then
-		env.info("Changing back comm menu done")
-		self.commMenuDone = false
-		missionCommands.removeItemForGroup(self:getGroup(),"Transport")
+	if not self:inAir() and not self.commMenuDone then
+		env.info("Look for f10 option" .. self:getName())
+		addRadioF10OptionsForGroup(self)
+		self:setCommMenuDone(true)
+	end
+	if self:inAir() then --got airborne so allow search again
+		env.info("got airborne so allow search again " .. self:getName())
+		trigger.action.outText("got airborne so allow search again " .. self:getName(),3)
+		self:setCommMenuDone(false)
 	end
 	env.info("update complete " .. self:getName())
 end
@@ -188,7 +194,7 @@ function updateAllHelico()
 	--DO UPDATE
 	for index,helo in ipairs (HelicoPlayerList) do
 		env.info("update for Loop")
-		--helo:update()
+		helo:update()
 	end
 end
 
@@ -240,60 +246,26 @@ function troopLoad(args)
 	trigger.action.outText("LOAD GROUP" ..	args[1] .. "...     TODO :)",15)
 end
 
--- HELICOPTER FINDER METHODS
-function addRadioF10Options()
-	trigger.action.outText("Setting radios " , 5	)
-	env.info("Radios ")
-	
-	--Clean radio command
-	--missionCommands.removeItem("Transport") -- remove all transport menu
-	env.info("Size in radio" .. table.maxn(HelicoPlayerList))
-	for k,helicoUnit in ipairs(HelicoPlayerList) do
-		env.info("Radios for " .. helicoUnit:getUnit():getName())
-		env.info("Radios for " .. helicoUnit:getUnit():getName() .. "is in air" .. tostring(helicoUnit:inAir()) .. "  " .. tostring(helicoUnit:getCommMenuDone()))
-		if not helicoUnit:getCommMenuDone() and  not helicoUnit:inAir() then
-			local group = helicoUnit:getGroup()
-			local groupID = group:getID()
-			env.info("Group " .. group:getName())
-			local rootF10 = missionCommands.addSubMenuForGroup(groupID, "Transport")
-			local troopMenu = missionCommands.addSubMenuForGroup(groupID, "Troop mouvement", rootF10)
-			local listOfTroop = helicoUnit:getCloseTroopList()
-			local loadTroopCommandList = {}
-			for index,troopGroup in ipairs(listOfTroop) do
-				env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup)
-				loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {troopGroup})
-			end
-			helicoUnit:setCommMenuDone(true)
-		end
+-- SET RADIO FOR THE GIVEN HelicoPlayer
+function addRadioF10OptionsForGroup(helicoPlayer)
+	env.info("addRadioF10OptionsForGroup ")
+	env.info("addRadioF10OptionsForGroup " .. helicoPlayer:getName())
+	local group = helicoPlayer:getGroup()
+	local groupID = group:getID()
+	missionCommands.removeItemForGroup(groupID,"Transport") -- remove all transport menu for this group
+	env.info("Group " .. group:getName())
+	local rootF10 = missionCommands.addSubMenuForGroup(groupID, "Transport")
+	local troopMenu = missionCommands.addSubMenuForGroup(groupID, "Troop mouvement", rootF10)
+	local listOfTroop = helicoPlayer:getCloseTroopList()
+	local loadTroopCommandList = {}
+	for index,troopGroup in ipairs(listOfTroop) do
+		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup)
+		env.info("Can carry troop: " .. troopGroup)
+		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {troopGroup})
 	end
+	env.info("addRadioF10OptionsForGroup finnish")
 end
-
-function ckeckIfStillAlive()
-	timer.scheduleFunction(ckeckIfStillAlive, nil, timer.getTime() + 4)
-	--next second, deal with radio
-	env.info("Asking for radios")
-	timer.scheduleFunction(addRadioF10Options, nil, timer.getTime() + 1)
-	
-	-- trigger.action.outText("checking still here", 1)
-	-- env.info("checking still here")
-	-- HelicoPlayerList = {} -- reset helicoPlayerList
-	-- for k,v in ipairs(chopperNameList) do
-		-- env.info("Testing " .. v, 1)
-		-- local unit = Unit.getByName(v)
-		-- if unit == nil then -- if unit not found now remove from list
-			-- trigger.action.outText("DELETING " .. v, 5	)
-			-- env.info("DELETING " .. v)
-			-- table.remove(chopperNameList , k)
-		-- else
-			-- env.info("Adding back to list " .. k .. "    "..v)
-			-- newHelico = HelicoPlayer:new(nil,unit)
-			-- newHelico:print()
-			-- table.insert(HelicoPlayerList,newHelico)
-			-- env.info("Size in check" .. table.maxn(HelicoPlayerList))
-		-- end
-	-- end
-end
-
+-- HELICOPTER FINDER METHODS
 function savePlayerChopper(group)
 	for index, unit in pairs(group:getUnits()) do
 		env.info("Checking " .. Unit.getName(unit))
@@ -392,7 +364,6 @@ for _, group in ipairs(infantryGoups) do
 	env.info("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group) )
 end
 
-timer.scheduleFunction(ckeckIfStillAlive, nil, timer.getTime() + 4)
 timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 
 checkingNewPilot()
