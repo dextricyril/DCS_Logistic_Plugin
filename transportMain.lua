@@ -154,14 +154,30 @@ function HelicoPlayer:setCommMenuDone(bool)
 	env.info("check CommMenu " .. tostring(self:getCommMenuDone()))
 end
 
-function HelicoPlayer:addUnitInTroop()
-	--TODO
+function HelicoPlayer:canEmbarkTroop(tableData)
+	env.info("canEmbarkTroop")
+	if table.maxn(tableData["units"]) <= self:getMaxTroop()
+	then 
+		env.info("canEmbarkTroop end true")
+		return true
+	else
+		env.info("canEmbarkTroop end false")
+		return false
+	end
+	
+end
+
+function HelicoPlayer:addTroop(tableData)
+	env.info("addTroop")
+	table.insert(self.troopInside, tableData)
+	env.info("check " ..self.troopInside[1]["name"])
+	env.info("addTroop end")
 end
 
 function HelicoPlayer:getCloseTroopList()
 	env.info("In close troop list" )
 	local closeTroopList={}
-	for index,group in ipairs (infantryGoups) do
+	for index,group in ipairs (infantryGoups) do -- Possible problem using infantryGoups global variable
 		if group:getCoalition() == Unit.getCoalition(self.unitObj) then
 			env.info("In close troop list checking group " .. group:getName())
 			local troopUnit = group:getUnit(1)  -- find the first unit in group
@@ -254,9 +270,26 @@ function troopLoad(args)
 	for key,_ in ipairs(args) do
 		env.info("found args " .. args[key])
 	end
-	env.info("LOAD GROUP" ..	args[1] .. "...     TODO :)")
+	local helicoPlayerName = args[1]
+	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
+	local troopGroupName = args[2]
+	env.info("LOAD GROUP" ..	troopGroupName .. "...     TODO :)")
 	--TODO
-	trigger.action.outText("LOAD GROUP" ..	args[1] .. "...     TODO :)",15)
+	trigger.action.outText("LOAD GROUP" ..	troopGroupName .. "...     TODO :)",15)
+	local troopGroup = Group.getByName(troopGroupName)
+	if troopGroup == nil then
+		trigger.action.outText("TROOPS NOT FOUND " .. troopGroupName , 15)
+		env.warning("troop not found " .. troopGroupName)
+		return
+	end
+	env.info("troopDataTable")
+	local troopDataTable = getTableGroup(troopGroup,helicoPlayer:getUnit():getPosition().p,nil) -- replace nil by heading would be cool
+	env.info("troopDataTable " .. troopDataTable["name"])
+	if helicoPlayer:canEmbarkTroop(troopDataTable) then
+		helicoPlayer:addTroop(troopDataTable)
+	end
+	trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
+	env.info("End troop load")
 end
 
 -- SET RADIO FOR THE GIVEN HelicoPlayer
@@ -274,7 +307,7 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	for index,troopGroup in ipairs(listOfTroop) do
 		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup)
 		trigger.action.outText("Can carry troop: " .. troopGroup,5)
-		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {troopGroup})
+		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {helicoPlayer:getName() , troopGroup})
 	end
 	--TODO ADD CARGO
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
