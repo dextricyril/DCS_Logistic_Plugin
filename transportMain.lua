@@ -125,8 +125,8 @@ function HelicoPlayer:update()
 		self:setCommMenuDone(true)
 	end
 	if self:inAir() then --got airborne so allow search again
-		env.info("got airborne so allow search again " .. self:getName())
-		trigger.action.outText("got airborne so allow search again " .. self:getName(),3)
+		env.info("Allow search again " .. self:getName())
+		trigger.action.outText("Allow search again " .. self:getName(),3)
 		self:setCommMenuDone(false)
 	end
 	env.info("update complete " .. self:getName())
@@ -147,6 +147,7 @@ function HelicoPlayer:getCommMenuDone()
 	env.info("getCommMenu to " .. tostring(self.commMenuDone))
 	return self.commMenuDone
 end
+
 function HelicoPlayer:setCommMenuDone(bool)
 	env.info("setCommMenu to " .. tostring(bool))
 	self.commMenuDone = bool
@@ -200,7 +201,6 @@ end
 
 function checkIfHelicoInList(name)
 	env.info("checkIfHelicoInList " .. table.maxn(HelicoPlayerList) .. "   " .. name)
-	
 
 	for index,helo in ipairs (HelicoPlayerList) do
 		
@@ -210,6 +210,19 @@ function checkIfHelicoInList(name)
 		end
 	end
 	return false
+end
+
+function getHelicoPlayerByName(name)
+	env.info("getHelicoPlayerByName " .. table.maxn(HelicoPlayerList) .. "   " .. name)
+
+	for index,helo in ipairs (HelicoPlayerList) do
+		env.info("for Loop " .. helo:getName())
+		if name == helo:getName() then
+			return helo
+		end
+	end
+	env.warning("Not found getHelicoPlayerByName:   " .. name)
+	return nil
 end
 
 -- LOCAL METHODS FOR INFANTRY CHECKING
@@ -260,15 +273,27 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	local loadTroopCommandList = {}
 	for index,troopGroup in ipairs(listOfTroop) do
 		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup)
-		env.info("Can carry troop: " .. troopGroup)
+		trigger.action.outText("Can carry troop: " .. troopGroup,5)
 		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {troopGroup})
 	end
+	--TODO ADD CARGO
+	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
+	
 	env.info("addRadioF10OptionsForGroup finnish")
 end
+
+function refreshCommMenu(args)
+	--env.info("refreshCommMenu")
+	helicoPlayerName = args[1]
+	helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
+	helicoPlayer:setCommMenuDone(false)
+	--env.info("refreshCommMenu complete")
+end
+
 -- HELICOPTER FINDER METHODS
 function savePlayerChopper(group)
 	for index, unit in pairs(group:getUnits()) do
-		env.info("Checking " .. Unit.getName(unit))
+		--env.info("Checking " .. Unit.getName(unit))
 		--Unit.getPlayerName(unit)
 		if Unit.getPlayerName(unit) ~= nil then
 			if not checkIfHelicoInList(Unit.getName(unit)) then
