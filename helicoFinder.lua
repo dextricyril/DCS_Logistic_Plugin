@@ -27,7 +27,7 @@ function HelicoPlayer:getMaxTroop()
 	if strType == "Ka-50" then return 0 end
 	if strType == "Mi-8MT" then return 24 end
 	if strType == "UH-1H" then return 10 end
-	return 3 -- SA342L
+	return 3 -- SA342
 end
 
 function HelicoPlayer:print()
@@ -37,21 +37,66 @@ function HelicoPlayer:print()
    trigger.action.outText("The type of chopper " .. Unit.getTypeName(self.unit) , 5)
 end
 
+function HelicoPlayer:getUnit()
+	return self.unit
+end
 
-chopperList = {}
+function HelicoPlayer:getGroup()
+	return Unit.getGroup(self.unit)
+end
+
+function HelicoPlayer:inAir()
+	return Unit.inAir(self.unit)
+end
+
+HelicoPlayerList = {}
 
 
+chopperNameList = {}
+
+function addRadioF10Options()
+	trigger.action.outText("Setting radios " , 5	)
+	env.info("Radios ")
+	
+	--Clean radio command
+	missionCommands.removeItem("Transport") -- remove all transport menu
+	env.info("Size in radio" .. table.maxn(HelicoPlayerList))
+	for k,helicoUnit in ipairs(HelicoPlayerList) do
+		env.info("Radios for " .. helicoUnit:getUnit():getName())
+		env.info("Radios for " .. helicoUnit:getUnit():getName() .. "is in air" .. tostring(helicoUnit:inAir()))
+		if not helicoUnit:inAir() then
+			local group = helicoUnit:getGroup()
+			local groupID = group:getID()
+			env.info("Group " .. group:getName())
+			local rootF10 = missionCommands.addSubMenuForGroup(groupID, "Transport")
+			local troopMenu = missionCommands.addSubMenuForGroup(groupID, "Troop mouvement", rootF10)
+			local loadTroopCommand = missionCommands.addCommandForGroup(groupID, "Embark Troops", troopMenu, nil)
+		end
+	end
+end
 
 function ckeckIfStillAlive()
 	timer.scheduleFunction(ckeckIfStillAlive, nil, timer.getTime() + 4)
-	trigger.action.outText("checking still here", 1)
+	--next second, deal with radio
+	env.info("Asking for radios")
+	timer.scheduleFunction(addRadioF10Options, nil, timer.getTime() + 1)
 	
-	for k,v in ipairs(chopperList) do
+	trigger.action.outText("checking still here", 1)
+	env.info("checking still here")
+	HelicoPlayerList = {} -- reset helicoPlayerList
+	for k,v in ipairs(chopperNameList) do
 		env.info("Testing " .. v, 1)
-		if Unit.getByName(v) == nil then -- if unit not found now remove from list
+		local unit = Unit.getByName(v)
+		if unit == nil then -- if unit not found now remove from list
 			trigger.action.outText("DELETING " .. v, 5	)
-			env.info("DELETING " .. v, 1)
-			table.remove(chopperList , k)
+			env.info("DELETING " .. v)
+			table.remove(chopperNameList , k)
+		else
+			env.info("Adding back to list " .. k .. "    "..v)
+			newHelico = HelicoPlayer:new(nil,unit)
+			newHelico:print()
+			table.insert(HelicoPlayerList,newHelico)
+			env.info("Size in check" .. table.maxn(HelicoPlayerList))
 		end
 	end
 end
@@ -62,17 +107,18 @@ function savePlayerChopper(group)
 		--Unit.getPlayerName(unit)
 		if Unit.getPlayerName(unit) ~= nil then
 			local notHere = true
-			for _, l in ipairs(chopperList) do 
+			for _, l in ipairs(chopperNameList) do 
 				if l == Unit.getName(unit) then
 					notHere = false
 				end
 			end
 			if notHere then
 				env.info("ADDING   " .. Unit.getName(unit))
-				table.insert(chopperList,Unit.getName(unit))
+				table.insert(chopperNameList,Unit.getName(unit))
+				--Debug chopper object
 				env.info("CREATING CHOPPER OBJECT ")
-				helico = HelicoPlayer:new(nil,unit)
-				helico.print(helico)
+				local helico = HelicoPlayer:new(nil,unit)
+				helico:print()
 			end
 		end
 	end
