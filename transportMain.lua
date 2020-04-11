@@ -65,8 +65,6 @@ infantryGoups = {}
 HelicoPlayerList = {}
 
 
-chopperNameList = {}
-
 --GLOBAL LIST OF PLAYABLE HELICOPTER UNIT
 
 -- Helicopter class
@@ -74,11 +72,12 @@ HelicoPlayer = {}
 
 
 -- Derived class method new
-function HelicoPlayer:new(o,unit)
+function HelicoPlayer:new(o,unitObj)
    o = o or {}
    setmetatable(o, self)
    self.__index = self
-   self.unit=unit
+   self.unitObj=unitObj
+   self.name = Unit.getName(unitObj)
    self.commMenuDone = false
    self.troopInside = {}
    return o
@@ -87,7 +86,7 @@ end
 -- Derived class method 
 
 function HelicoPlayer:getMaxTroop()
-	strType = Unit.getTypeName(self.unit)
+	strType = Unit.getTypeName(self.unitObj)
 	if strType == "Ka-50" then return 0 end
 	if strType == "Mi-8MT" then return 24 end
 	if strType == "UH-1H" then return 10 end
@@ -95,31 +94,47 @@ function HelicoPlayer:getMaxTroop()
 end
 
 function HelicoPlayer:print()
-   env.info("The name of the pilot" .. Unit.getName(self.unit))
-   env.info("The type of chopper " .. Unit.getTypeName(self.unit) )
-   trigger.action.outText("The name of the pilot" .. Unit.getName(self.unit) .. " MAX troop " .. self:getMaxTroop() , 5 )
-   trigger.action.outText("The type of chopper " .. Unit.getTypeName(self.unit) , 5)
+   env.info("The name of the pilot" .. Unit.getName(self.unitObj))
+   env.info("The type of chopper " .. Unit.getTypeName(self.unitObj) )
+   trigger.action.outText("The name of the pilot" .. Unit.getName(self.unitObj) .. " MAX troop " .. self:getMaxTroop() , 5 )
+   trigger.action.outText("The type of chopper " .. Unit.getTypeName(self.unitObj) , 5)
 end
 
 function HelicoPlayer:getUnit()
-	return self.unit
+	return self.unitObj
+end
+
+function HelicoPlayer:getName()
+	return self.name
 end
 
 function HelicoPlayer:getGroup()
-	return Unit.getGroup(self.unit)
+	return Unit.getGroup(self.unitObj)
 end
 
 function HelicoPlayer:inAir()
-	return Unit.inAir(self.unit)
+	return Unit.inAir(self.unitObj)
 end
 
 function HelicoPlayer:update()
-	env.info("updateHelico")
+	env.info("updateHelico" .. tostring(self:inAir()))
 	if self:inAir() and self.commMenuDone then
 		env.info("Changing back comm menu done")
 		self.commMenuDone = false
 		missionCommands.removeItemForGroup(self:getGroup(),"Transport")
 	end
+	env.info("update complete " .. self:getName())
+end
+
+function HelicoPlayer:stillExists()
+	env.info("stillExists")
+	env.info("stillExists " .. self.name)
+	local testUnitPresent = Unit.getByName(self.name)
+	env.info("stillExists test " .. tostring(testUnitPresent))
+	if testUnitPresent == nil then
+		return false
+	end
+	return true
 end
 
 function HelicoPlayer:getCommMenuDone()
@@ -140,10 +155,10 @@ function HelicoPlayer:getCloseTroopList()
 	env.info("In close troop list" )
 	local closeTroopList={}
 	for index,group in ipairs (infantryGoups) do
-		if group:getCoalition() == Unit.getCoalition(self.unit) then
+		if group:getCoalition() == Unit.getCoalition(self.unitObj) then
 			env.info("In close troop list checking group " .. group:getName())
 			local troopUnit = group:getUnit(1)  -- find the first unit in group
-			local distance = getDistance(self.unit, troopUnit)
+			local distance = getDistance(self.unitObj, troopUnit)
 			if distance < 20 then
 				env.info("In close troop inserting " .. group:getName())
 				table.insert(closeTroopList,group:getName())
@@ -155,9 +170,40 @@ end
 
 --ALL HELICO METHODS
 function updateAllHelico()
+	env.info("updateAllHelico " .. table.maxn(HelicoPlayerList))
+	timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
+	--DELETE PREVIOUSLY EXISTING HELO
+	local listOfMissingHelo = {}
 	for index,helo in ipairs (HelicoPlayerList) do
-		helo:update()
+		env.info("for Loop")
+		if not helo:stillExists() then
+			env.info("REMOVING A PLAYER HELO")
+			trigger.action.outText("REMOVING A PLAYER HELO " .. helo:getName(), 10)
+			table.insert(listOfMissingHelo, index)
+		end
 	end
+	for _,indexOfHelicoPlayerList in ipairs (listOfMissingHelo) do
+		table.remove(HelicoPlayerList,indexOfHelicoPlayerList)
+	end
+	--DO UPDATE
+	for index,helo in ipairs (HelicoPlayerList) do
+		env.info("update for Loop")
+		--helo:update()
+	end
+end
+
+function checkIfHelicoInList(name)
+	env.info("checkIfHelicoInList " .. table.maxn(HelicoPlayerList) .. "   " .. name)
+	
+
+	for index,helo in ipairs (HelicoPlayerList) do
+		
+		env.info("for Loop " .. helo:getName())
+		if name == helo:getName() then
+			return true
+		end
+	end
+	return false
 end
 
 -- LOCAL METHODS FOR INFANTRY CHECKING
@@ -205,7 +251,7 @@ function addRadioF10Options()
 	for k,helicoUnit in ipairs(HelicoPlayerList) do
 		env.info("Radios for " .. helicoUnit:getUnit():getName())
 		env.info("Radios for " .. helicoUnit:getUnit():getName() .. "is in air" .. tostring(helicoUnit:inAir()) .. "  " .. tostring(helicoUnit:getCommMenuDone()))
-		if not helicoUnit:getCommMenuDone() then
+		if not helicoUnit:getCommMenuDone() and  not helicoUnit:inAir() then
 			local group = helicoUnit:getGroup()
 			local groupID = group:getID()
 			env.info("Group " .. group:getName())
@@ -228,24 +274,24 @@ function ckeckIfStillAlive()
 	env.info("Asking for radios")
 	timer.scheduleFunction(addRadioF10Options, nil, timer.getTime() + 1)
 	
-	trigger.action.outText("checking still here", 1)
-	env.info("checking still here")
-	HelicoPlayerList = {} -- reset helicoPlayerList
-	for k,v in ipairs(chopperNameList) do
-		env.info("Testing " .. v, 1)
-		local unit = Unit.getByName(v)
-		if unit == nil then -- if unit not found now remove from list
-			trigger.action.outText("DELETING " .. v, 5	)
-			env.info("DELETING " .. v)
-			table.remove(chopperNameList , k)
-		else
-			env.info("Adding back to list " .. k .. "    "..v)
-			newHelico = HelicoPlayer:new(nil,unit)
-			newHelico:print()
-			table.insert(HelicoPlayerList,newHelico)
-			env.info("Size in check" .. table.maxn(HelicoPlayerList))
-		end
-	end
+	-- trigger.action.outText("checking still here", 1)
+	-- env.info("checking still here")
+	-- HelicoPlayerList = {} -- reset helicoPlayerList
+	-- for k,v in ipairs(chopperNameList) do
+		-- env.info("Testing " .. v, 1)
+		-- local unit = Unit.getByName(v)
+		-- if unit == nil then -- if unit not found now remove from list
+			-- trigger.action.outText("DELETING " .. v, 5	)
+			-- env.info("DELETING " .. v)
+			-- table.remove(chopperNameList , k)
+		-- else
+			-- env.info("Adding back to list " .. k .. "    "..v)
+			-- newHelico = HelicoPlayer:new(nil,unit)
+			-- newHelico:print()
+			-- table.insert(HelicoPlayerList,newHelico)
+			-- env.info("Size in check" .. table.maxn(HelicoPlayerList))
+		-- end
+	-- end
 end
 
 function savePlayerChopper(group)
@@ -253,19 +299,12 @@ function savePlayerChopper(group)
 		env.info("Checking " .. Unit.getName(unit))
 		--Unit.getPlayerName(unit)
 		if Unit.getPlayerName(unit) ~= nil then
-			local notHere = true
-			for _, l in ipairs(chopperNameList) do 
-				if l == Unit.getName(unit) then
-					notHere = false
-				end
-			end
-			if notHere then
+			if not checkIfHelicoInList(Unit.getName(unit)) then
 				env.info("ADDING   " .. Unit.getName(unit))
-				table.insert(chopperNameList,Unit.getName(unit))
-				--Debug chopper object
-				env.info("CREATING CHOPPER OBJECT ")
-				local helico = HelicoPlayer:new(nil,unit)
-				helico:print()
+				trigger.action.outText("ADDING   " .. Unit.getName(unit), 5)
+				newHelico = HelicoPlayer:new(nil,unit)
+				newHelico:print()
+				table.insert(HelicoPlayerList,newHelico)
 			end
 		end
 	end
