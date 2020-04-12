@@ -173,23 +173,6 @@ function HelicoPlayer:embarkTroop(tableData)
 	env.info("embarkTroop end")
 end
 
--- function HelicoPlayer:getCloseTroopList()
-	-- env.info("In close troop list" )
-	-- local closeTroopList={}
-	-- for index,group in ipairs (infantryGoups) do -- Possible problem using infantryGoups global variable
-		-- if group:getCoalition() == Unit.getCoalition(self.unitObj) then
-			-- env.info("In close troop list checking group " .. group:getName())
-			-- local troopUnit = group:getUnit(1)  -- find the first unit in group
-			-- local distance = getDistance(self.unitObj, troopUnit)
-			-- if distance < 20 then
-				-- env.info("In close troop inserting " .. group:getName())
-				-- table.insert(closeTroopList,group:getName())
-			-- end
-		-- end
-	-- end
-	-- return closeTroopList
--- end
-
 function HelicoPlayer:checkTroopInside()
 	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
 		env.info("Carrying group: " .. troop["name"])
@@ -356,7 +339,7 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	--Desimbarking troop
 	env.info("Disembark troop ")
 	if (helicoPlayer:hasTroopInside()) then
-		missionCommands.addCommandForGroup(groupID, "check troop ", troopMenu,troopLoad , {helicoPlayer:getName()})
+		missionCommands.addCommandForGroup(groupID, "check troop ", troopMenu,checkTroopHelicoPlayer , {helicoPlayer:getName()})
 		missionCommands.addCommandForGroup(groupID, "Disembark troop ", troopMenu,disembarkTroopHelicoPlayer , {helicoPlayer:getName()})
 	end
 	--Embarking troop
