@@ -154,12 +154,19 @@ end
 
 function HelicoPlayer:canEmbarkTroop(tableData)
 	env.info("canEmbarkTroop")
-	if table.maxn(tableData["units"]) <= self:getMaxTroop()
+	local currentNumberOfTroop = 0
+	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
+		currentNumberOfTroop = currentNumberOfTroop + table.maxn(troop["units"])
+	end
+	env.info("currentNumberOfTroop " .. currentNumberOfTroop)
+	-- if the current number of troops plus new group can be carried by this helicopter
+	if (currentNumberOfTroop + table.maxn(tableData["units"])) <= self:getMaxTroop() 
 	then 
 		env.info("canEmbarkTroop end true")
 		return true
 	else
 		env.info("canEmbarkTroop end false")
+		trigger.action.outTextForGroup(self:getGroup():getID(),"Cannot carry troop, Overcapacity",15)
 		return false
 	end
 	
@@ -325,9 +332,8 @@ function troopLoad(args)
 		env.info("Not up to date troop")
 		refreshCommMenu(helicoPlayerName)
 	end
-	env.info("LOAD GROUP" ..	troopGroupName .. "...     TODO :)")
+	--env.info("LOAD GROUP" ..	troopGroupName .. "...     TODO :)")
 	--TODO
-	trigger.action.outText("LOAD GROUP" ..	troopGroupName .. "...     TODO :)",15)
 	local troopGroup = Group.getByName(troopGroupName)
 	if troopGroup == nil then
 		trigger.action.outText("TROOPS NOT FOUND " .. troopGroupName , 15)
@@ -339,10 +345,10 @@ function troopLoad(args)
 	env.info("troopDataTable " .. troopDataTable["name"] .. troopDataTable["country"])
 	if helicoPlayer:canEmbarkTroop(troopDataTable) then
 		helicoPlayer:embarkTroop(troopDataTable)
+		trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
+		troopGroup.destroy(troopGroup)
+		helicoPlayer:setCommMenuDone(false)
 	end
-	trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
-	troopGroup.destroy(troopGroup)
-	helicoPlayer:setCommMenuDone(false)
 	env.info("End troop load")
 end
 
@@ -356,8 +362,7 @@ function disembarkTroopHelicoPlayer(args)
 	local helicoPlayerName = args[1]
 	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
 	helicoPlayer:disembarkTroop()
-	env.info("disembarking")
-	trigger.action.outTextForGroup(helicoPlayer:getGroup():getID(),"Disembarking ... TODO",15)
+	env.info("disembarking end")
 end
 
 -- SET RADIO FOR THE GIVEN HelicoPlayer
@@ -473,32 +478,6 @@ trigger.action.outText("Search for groups", 2)
 -- MAIN TEXT FOR HELICO FINDER
 
 trigger.action.outText("Find players in helicopter", 2)
-
-
--- LOOK FOR TROOP THAT CAN BE CARRIED
-
--- --Looking for red groups
--- trigger.action.outText("red infantry check", 2 )
--- for i, gp in pairs(coalition.getGroups(1)) do
-	-- if isGroupInfantryOnly(gp) then
-		-- table.insert(infantryGoups,gp)
-	-- end
--- end
-
--- --Looking for blue groups
--- trigger.action.outText("blue infantry check", 2 )
--- for i, gp in pairs(coalition.getGroups(2)) do
-	-- trigger.action.outText(Group.getName(gp), 10)
-	-- if isGroupInfantryOnly(gp) then
-		-- table.insert(infantryGoups,gp)
-	-- end
--- end
-
--- -- checking
--- for _, group in ipairs(infantryGoups) do
-	-- trigger.action.outText("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group), 15 )
-	-- env.info("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group) )
--- end
 
 timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 
