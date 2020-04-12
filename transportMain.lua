@@ -170,6 +170,7 @@ end
 function HelicoPlayer:addTroop(tableData)
 	env.info("addTroop")
 	table.insert(self.troopInside, tableData)
+	self:setCommMenuDone(false)
 	env.info("check " ..self.troopInside[1]["name"])
 	env.info("addTroop end")
 end
@@ -189,6 +190,22 @@ function HelicoPlayer:getCloseTroopList()
 		end
 	end
 	return closeTroopList
+end
+
+function HelicoPlayer:checkTroopInside()
+	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
+		env.info("Carrying group: " .. troop["name"])
+		trigger.action.outText("Carrying group: " .. troop["name"],10)
+	end
+end
+
+function HelicoPlayer:disembarkTroop()
+	self:setCommMenuDone(false)
+	env.info("spawn troop")
+end
+
+function HelicoPlayer:hasTroopInside()
+	return (table.maxn(self.troopInside)>0)
 end
 
 --ALL HELICO METHODS
@@ -289,7 +306,21 @@ function troopLoad(args)
 		helicoPlayer:addTroop(troopDataTable)
 	end
 	trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
+	troopGroup.destroy(troopGroup)
 	env.info("End troop load")
+end
+
+function checkTroopHelicoPlayer(args)
+	local helicoPlayerName = args[1]
+	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
+	helicoPlayer:checkTroopInside()
+end
+
+function disembarkTroopHelicoPlayer(args)
+	local helicoPlayerName = args[1]
+	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
+	helicoPlayer:disembarkTroop()
+	trigger.action.outTextForGroup("Disembarking ... TODO",15)
 end
 
 -- SET RADIO FOR THE GIVEN HelicoPlayer
@@ -302,6 +333,13 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	env.info("Group " .. group:getName())
 	local rootF10 = missionCommands.addSubMenuForGroup(groupID, "Transport")
 	local troopMenu = missionCommands.addSubMenuForGroup(groupID, "Troop mouvement", rootF10)
+	--Desimbarking troop
+	env.info("Disembark troop ")
+	if (helicoPlayer:hasTroopInside()) then
+		missionCommands.addCommandForGroup(groupID, "check troop ", troopMenu,troopLoad , {helicoPlayer:getName()})
+		missionCommands.addCommandForGroup(groupID, "Disembark troop ", troopMenu,disembarkTroopHelicoPlayer , {helicoPlayer:getName()})
+	end
+	--Embarking troop
 	local listOfTroop = helicoPlayer:getCloseTroopList()
 	local loadTroopCommandList = {}
 	for index,troopGroup in ipairs(listOfTroop) do
