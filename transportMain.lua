@@ -61,10 +61,7 @@ function getTableGroup(groupParam,pointPosition,heading)
 end
 
 -- GLOBAL VARIABLES
-infantryGoups = {}
-
 HelicoPlayerList = {}
-
 
 --GLOBAL LIST OF PLAYABLE HELICOPTER UNIT
 
@@ -176,22 +173,22 @@ function HelicoPlayer:embarkTroop(tableData)
 	env.info("embarkTroop end")
 end
 
-function HelicoPlayer:getCloseTroopList()
-	env.info("In close troop list" )
-	local closeTroopList={}
-	for index,group in ipairs (infantryGoups) do -- Possible problem using infantryGoups global variable
-		if group:getCoalition() == Unit.getCoalition(self.unitObj) then
-			env.info("In close troop list checking group " .. group:getName())
-			local troopUnit = group:getUnit(1)  -- find the first unit in group
-			local distance = getDistance(self.unitObj, troopUnit)
-			if distance < 20 then
-				env.info("In close troop inserting " .. group:getName())
-				table.insert(closeTroopList,group:getName())
-			end
-		end
-	end
-	return closeTroopList
-end
+-- function HelicoPlayer:getCloseTroopList()
+	-- env.info("In close troop list" )
+	-- local closeTroopList={}
+	-- for index,group in ipairs (infantryGoups) do -- Possible problem using infantryGoups global variable
+		-- if group:getCoalition() == Unit.getCoalition(self.unitObj) then
+			-- env.info("In close troop list checking group " .. group:getName())
+			-- local troopUnit = group:getUnit(1)  -- find the first unit in group
+			-- local distance = getDistance(self.unitObj, troopUnit)
+			-- if distance < 20 then
+				-- env.info("In close troop inserting " .. group:getName())
+				-- table.insert(closeTroopList,group:getName())
+			-- end
+		-- end
+	-- end
+	-- return closeTroopList
+-- end
 
 function HelicoPlayer:checkTroopInside()
 	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
@@ -213,26 +210,39 @@ function HelicoPlayer:getNearbyGroups()
 	env.info("getNearbyGroups")
 	local nearbyGroups = {
 		["troops"] = {},
-		["groundUnit"] = {},
+		["groundUnits"] = {},
 	}
-
+	
+	local coalitionNumber = self.unitObj:getCoalition()
 	env.info("getNearbyGroups " .. self.unitObj:getCoalition())
 	
 	--trigger.action.outText("red infantry check", 2 )
-	for i, gp in pairs(coalition.getGroups(self.unitObj:getCoalition())) do
-		groupUnit = gp[1]
+	for i, group in ipairs(coalition.getGroups(coalitionNumber)) do
+		env.info("Working on " .. group:getName())
+		groupUnit = group:getUnit(1)
+		env.info("Working on " .. groupUnit:getName())
 		local distance = getDistance(self.unitObj, groupUnit)
 		if distance < 30 then
-			env.info("group is close " .. gp:getName())
+			env.info("group is close " .. group:getName())
 			if (isGroupInfantryOnly(group) and distance < 16) then
-				env.info("infantry is close " .. gp:getName())
+				env.info("infantry is close " .. group:getName())
+				table.insert(nearbyGroups["troops"], group)
 			elseif( group:getCategory() == 2 ) --if ground vehicule
 			then
-				env.info("close unit " .. gp:getName())
+				table.insert(nearbyGroups["groundUnits"], group)
+				env.info("close unit " .. group:getName())
 			end
 		end
 	end
+	env.info("getNearbyGroups before checking")
 
+	local listOfTroop = nearbyGroups["troops"]
+	-- local loadTroopCommandList = {}
+	for index,troopGroup in ipairs(listOfTroop) do
+		env.info(" nearby troop " .. troopGroup:getName())
+		trigger.action.outText(" nearby troop : " .. troopGroup:getName(),5)
+	end
+	
 	return nearbyGroups
 end
 --ALL HELICO METHODS
@@ -285,28 +295,6 @@ function getHelicoPlayerByName(name)
 	return nil
 end
 
--- LOCAL METHODS FOR INFANTRY CHECKING
-function inListTroops(unitType) -- String with unit type
-	local troops = Set { "Soldier M249", "Soldier M4", "Stinger comm", "Soldier stinger","Infantry AK","Paratrooper AKS-74",
-		"SA-18 Igla comm","SA-18 Igla manpad","SA-18 Igla-S manpad","SA-18 Igla-S comm" }
-	if troops[unitType] then
-		env.info("YES " .. unitType)
-		return true
-	end
-	env.info("Not found " .. unitType)
-	return false
-end
-
-function isGroupInfantryOnly(group)
-	for index, unit in pairs(group:getUnits()) do
-		--trigger.action.outText(Unit.getName(unit) .. "     " .. Unit.getTypeName(unit), 10 )
-		env.info(Unit.getTypeName(unit))
-		if not inListTroops(Unit.getTypeName(unit)) then
-			return false
-		end
-	end
-	return true
-end
 
 --TROOP LOAD AND UNLOAD
 function troopLoad(args)
@@ -317,6 +305,10 @@ function troopLoad(args)
 	local helicoPlayerName = args[1]
 	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
 	local troopGroupName = args[2]
+	if (troopGroupName == nil) then
+		env.info("Not up to date troop")
+		refreshCommMenu(helicoPlayerName)
+	end
 	env.info("LOAD GROUP" ..	troopGroupName .. "...     TODO :)")
 	--TODO
 	trigger.action.outText("LOAD GROUP" ..	troopGroupName .. "...     TODO :)",15)
@@ -334,6 +326,7 @@ function troopLoad(args)
 	end
 	trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
 	troopGroup.destroy(troopGroup)
+	helicoPlayer:setCommMenuDone(false)
 	env.info("End troop load")
 end
 
@@ -367,12 +360,12 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 		missionCommands.addCommandForGroup(groupID, "Disembark troop ", troopMenu,disembarkTroopHelicoPlayer , {helicoPlayer:getName()})
 	end
 	--Embarking troop
-	local listOfTroop = helicoPlayer:getCloseTroopList()
+	local listOfTroop = helicoPlayer:getNearbyGroups()["troops"]
 	local loadTroopCommandList = {}
 	for index,troopGroup in ipairs(listOfTroop) do
-		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup)
-		trigger.action.outText("Can carry troop: " .. troopGroup,5)
-		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup, troopMenu,troopLoad , {helicoPlayer:getName() , troopGroup})
+		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup:getName())
+		trigger.action.outText("Can carry troop: " .. troopGroup:getName(),5)
+		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup:getName(), troopMenu,troopLoad , {helicoPlayer:getName() , troopGroup:getName()})
 	end
 	--TODO ADD CARGO
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
@@ -439,13 +432,16 @@ function inListTroops(unitType) -- String with unit type
 end
 
 function isGroupInfantryOnly(group)
+	env.info("isGroupInfantryOnly")
 	for index, unit in pairs(group:getUnits()) do
 		--trigger.action.outText(Unit.getName(unit) .. "     " .. Unit.getTypeName(unit), 10 )
 		env.info(Unit.getTypeName(unit))
 		if not inListTroops(Unit.getTypeName(unit)) then
+			env.info("isGroupInfantryOnly false")
 			return false
 		end
 	end
+	env.info("isGroupInfantryOnly true")
 	return true
 end
 
@@ -464,28 +460,28 @@ trigger.action.outText("Find players in helicopter", 2)
 
 -- LOOK FOR TROOP THAT CAN BE CARRIED
 
---Looking for red groups
-trigger.action.outText("red infantry check", 2 )
-for i, gp in pairs(coalition.getGroups(1)) do
-	if isGroupInfantryOnly(gp) then
-		table.insert(infantryGoups,gp)
-	end
-end
+-- --Looking for red groups
+-- trigger.action.outText("red infantry check", 2 )
+-- for i, gp in pairs(coalition.getGroups(1)) do
+	-- if isGroupInfantryOnly(gp) then
+		-- table.insert(infantryGoups,gp)
+	-- end
+-- end
 
---Looking for blue groups
-trigger.action.outText("blue infantry check", 2 )
-for i, gp in pairs(coalition.getGroups(2)) do
-	trigger.action.outText(Group.getName(gp), 10)
-	if isGroupInfantryOnly(gp) then
-		table.insert(infantryGoups,gp)
-	end
-end
+-- --Looking for blue groups
+-- trigger.action.outText("blue infantry check", 2 )
+-- for i, gp in pairs(coalition.getGroups(2)) do
+	-- trigger.action.outText(Group.getName(gp), 10)
+	-- if isGroupInfantryOnly(gp) then
+		-- table.insert(infantryGoups,gp)
+	-- end
+-- end
 
--- checking
-for _, group in ipairs(infantryGoups) do
-	trigger.action.outText("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group), 15 )
-	env.info("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group) )
-end
+-- -- checking
+-- for _, group in ipairs(infantryGoups) do
+	-- trigger.action.outText("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group), 15 )
+	-- env.info("Saved group " .. Group.getName(group) .. " IN COALITION "  .. Group.getCoalition(group) )
+-- end
 
 timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 
