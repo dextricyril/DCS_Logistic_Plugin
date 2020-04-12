@@ -38,6 +38,7 @@ function getTableGroup(groupParam,pointPosition,heading)
     ["name"] = groupParam.getName(groupParam),
     ["start_time"] = 0,
     ["task"] = "Ground Nothing",
+	["country"] = groupParam:getUnit(1):getCountry()
   } -- end of [1]
   
     for index, unit in pairs(groupParam:getUnits()) do
@@ -167,12 +168,12 @@ function HelicoPlayer:canEmbarkTroop(tableData)
 	
 end
 
-function HelicoPlayer:addTroop(tableData)
-	env.info("addTroop")
+function HelicoPlayer:embarkTroop(tableData)
+	env.info("embarkTroop")
 	table.insert(self.troopInside, tableData)
 	self:setCommMenuDone(false)
 	env.info("check " ..self.troopInside[1]["name"])
-	env.info("addTroop end")
+	env.info("embarkTroop end")
 end
 
 function HelicoPlayer:getCloseTroopList()
@@ -208,6 +209,32 @@ function HelicoPlayer:hasTroopInside()
 	return (table.maxn(self.troopInside)>0)
 end
 
+function HelicoPlayer:getNearbyGroups()
+	env.info("getNearbyGroups")
+	local nearbyGroups = {
+		["troops"] = {},
+		["groundUnit"] = {},
+	}
+
+	env.info("getNearbyGroups " .. self.unitObj:getCoalition())
+	
+	--trigger.action.outText("red infantry check", 2 )
+	for i, gp in pairs(coalition.getGroups(self.unitObj:getCoalition())) do
+		groupUnit = gp[1]
+		local distance = getDistance(self.unitObj, groupUnit)
+		if distance < 30 then
+			env.info("group is close " .. gp:getName())
+			if (isGroupInfantryOnly(group) and distance < 16) then
+				env.info("infantry is close " .. gp:getName())
+			elseif( group:getCategory() == 2 ) --if ground vehicule
+			then
+				env.info("close unit " .. gp:getName())
+			end
+		end
+	end
+
+	return nearbyGroups
+end
 --ALL HELICO METHODS
 function updateAllHelico()
 	env.info("updateAllHelico " .. table.maxn(HelicoPlayerList))
@@ -301,9 +328,9 @@ function troopLoad(args)
 	end
 	env.info("troopDataTable")
 	local troopDataTable = getTableGroup(troopGroup,helicoPlayer:getUnit():getPosition().p,nil) -- replace nil by heading would be cool
-	env.info("troopDataTable " .. troopDataTable["name"])
+	env.info("troopDataTable " .. troopDataTable["name"] .. troopDataTable["country"])
 	if helicoPlayer:canEmbarkTroop(troopDataTable) then
-		helicoPlayer:addTroop(troopDataTable)
+		helicoPlayer:embarkTroop(troopDataTable)
 	end
 	trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
 	troopGroup.destroy(troopGroup)
