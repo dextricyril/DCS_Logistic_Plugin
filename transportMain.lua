@@ -123,7 +123,6 @@ function HelicoPlayer:update()
 	end
 	if self:inAir() then --got airborne so allow search again
 		env.info("Allow search again " .. self:getName())
-		trigger.action.outText("Allow search again " .. self:getName(),3)
 		self:setCommMenuDone(false)
 	end
 	env.info("update complete " .. self:getName())
@@ -211,7 +210,6 @@ end
 
 function HelicoPlayer:disembarkTroop()
 	env.info("spawn troop")
-	self:setCommMenuDone(false)
 	self:setDisembarkingTroopsCoordinates()
 	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
 		local countryId = troop["country"]
@@ -223,7 +221,7 @@ function HelicoPlayer:disembarkTroop()
 	end
 	--empty troop list
 	self.troopInside = {}
-	self:setCommMenuDone(false)
+	env.info("spawn troop end")
 end
 
 function HelicoPlayer:hasTroopInside()
@@ -283,7 +281,8 @@ end
 function updateAllHelico()
 	env.info("updateAllHelico " .. table.maxn(HelicoPlayerList))
 	printHelicoList()
-	timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
+	-- CHECK EVERY CHOPPER EVERY SECONDS HAS A HUGE IMPACT ON CPU, Change +1 to something else if needed
+	timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 1) 
 	--DELETE PREVIOUSLY EXISTING HELO
 	local listOfMissingHelo = {}
 	for index,helo in ipairs (HelicoPlayerList) do
@@ -347,7 +346,6 @@ function troopLoad(args)
 	local troopGroupName = args[2]
 	if (troopGroupName == nil) then
 		env.info("Not up to date troop")
-		refreshCommMenu(helicoPlayerName)
 	end
 	--env.info("LOAD GROUP" ..	troopGroupName .. "...     TODO :)")
 	--TODO
@@ -364,8 +362,9 @@ function troopLoad(args)
 		helicoPlayer:embarkTroop(troopDataTable)
 		trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
 		troopGroup.destroy(troopGroup)
-		helicoPlayer:setCommMenuDone(false)
 	end
+	--update menu
+	helicoPlayer:setCommMenuDone(false)
 	env.info("End troop load")
 end
 
@@ -379,6 +378,8 @@ function disembarkTroopHelicoPlayer(args)
 	local helicoPlayerName = args[1]
 	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
 	helicoPlayer:disembarkTroop()
+	--update menu
+	helicoPlayer:setCommMenuDone(false)
 	env.info("disembarking end")
 end
 
@@ -487,9 +488,6 @@ function isGroupInfantryOnly(group)
 	env.info("isGroupInfantryOnly true")
 	return true
 end
-
-
-
 
 --MAIN TEXT
 
