@@ -180,9 +180,42 @@ function HelicoPlayer:checkTroopInside()
 	end
 end
 
+function HelicoPlayer:setDisembarkingTroopsCoordinates()
+	env.info("setDisembarkingTroopsCoordinates")
+	helicoCoordinates = self:getUnit():getPosition().p
+	env.info("setDisembarkingTroopsCoordinates " .. helicoCoordinates.x .."  Z  " .. helicoCoordinates.z)
+	for indexGroup,troop in ipairs (self.troopInside) do -- troop is formated as groupData
+		env.info("Group: " .. troop["name"])
+		troop["y"] = helicoCoordinates.z
+		troop["x"] = helicoCoordinates.x
+		--trigger.action.outText("Carrying group: " .. troop["name"],10)
+		for indexUnit,soldier in ipairs (troop["units"]) do
+			env.info("SoldiersetDise " .. soldier["name"])
+			--Give the unit a delta to not spawn into each other
+			coordZ = 3 +  indexUnit + helicoCoordinates.z
+			coordX = 3 + indexGroup  +helicoCoordinates.x
+			soldier["y"] = coordZ
+			soldier["x"] = coordX
+		end
+	end
+	env.info("setDisembarkingTroopsCoordinates end")
+end
+
 function HelicoPlayer:disembarkTroop()
-	self:setCommMenuDone(false)
 	env.info("spawn troop")
+	self:setCommMenuDone(false)
+	self:setDisembarkingTroopsCoordinates()
+	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
+		local countryId = troop["country"]
+		local groupCategory = Group.Category.GROUND
+		newGroup = coalition.addGroup(countryId,groupCategory,troop)
+		env.info("Disembarking : " .. troop["name"])
+		env.info("DisembarkingCheck : " .. newGroup:getName())
+		trigger.action.outText("Disembarking: " .. troop["name"],10)
+	end
+	--empty troop list
+	self.troopInside = {}
+	self:setCommMenuDone(false)
 end
 
 function HelicoPlayer:hasTroopInside()
@@ -323,7 +356,8 @@ function disembarkTroopHelicoPlayer(args)
 	local helicoPlayerName = args[1]
 	local helicoPlayer = getHelicoPlayerByName(helicoPlayerName)
 	helicoPlayer:disembarkTroop()
-	trigger.action.outTextForGroup("Disembarking ... TODO",15)
+	env.info("disembarking")
+	trigger.action.outTextForGroup(helicoPlayer:getGroup():getID(),"Disembarking ... TODO",15)
 end
 
 -- SET RADIO FOR THE GIVEN HelicoPlayer
