@@ -196,7 +196,7 @@ function HelicoPlayer:setDisembarkingTroopsCoordinates()
 		env.info("Group: " .. troop["name"])
 		troop["y"] = helicoCoordinates.z
 		troop["x"] = helicoCoordinates.x
-		--trigger.action.outText("Carrying group: " .. troop["name"],10)
+		
 		for indexUnit,soldier in ipairs (troop["units"]) do
 			env.info("SoldiersetDise " .. soldier["name"])
 			--Give the unit a delta to not spawn into each other
@@ -239,7 +239,6 @@ function HelicoPlayer:getNearbyGroups()
 	local coalitionNumber = self.unitObj:getCoalition()
 	env.info("getNearbyGroups " .. self.unitObj:getCoalition())
 	
-	--trigger.action.outText("red infantry check", 2 )
 	for i, group in ipairs(coalition.getGroups(coalitionNumber)) do
 		env.info("Working on " .. group:getName())
 		groupUnit = group:getUnit(1)
@@ -260,7 +259,6 @@ function HelicoPlayer:getNearbyGroups()
 	env.info("getNearbyGroups before checking")
 
 	local listOfTroop = nearbyGroups["troops"]
-	-- local loadTroopCommandList = {}
 	for index,troopGroup in ipairs(listOfTroop) do
 		env.info(" nearby troop " .. troopGroup:getName())
 		trigger.action.outTextForGroup(self:getGroup():getID(),"Can carry troop: " .. troopGroup:getName(),5)
@@ -292,8 +290,6 @@ function updateAllHelico()
 		if not helo:stillExists() then
 			env.info("REMOVING A PLAYER HELO ")
 			env.info("REMOVING A PLAYER HELO " .. helo:getName() )
-			--trigger.action.outText("REMOVING A PLAYER HELO " .. helo:getName(), 10)
---WARNING REMOVAL DISABLED
 			table.insert(listOfMissingHelo, index)
 		end
 	end
@@ -358,7 +354,6 @@ function troopLoad(args)
 	env.info("troopDataTable " .. troopDataTable["name"] .. troopDataTable["country"])
 	if helicoPlayer:canEmbarkTroop(troopDataTable) then
 		helicoPlayer:embarkTroop(troopDataTable)
-		--trigger.action.outText(troopGroupName .. " is now inside " .. helicoPlayerName, 15)
 		troopGroup.destroy(troopGroup)
 	end
 	--update menu
@@ -423,7 +418,6 @@ end
 function savePlayerChopper(group)
 	for index, unit in pairs(group:getUnits()) do
 		--env.info("Checking " .. Unit.getName(unit))
-		--Unit.getPlayerName(unit)
 		if Unit.getPlayerName(unit) ~= nil then
 			env.info("MAYBEADDING   " .. Unit.getPlayerName(unit) .. "     " ..Unit.getName(unit))
 			if not checkIfHelicoInList(Unit.getName(unit)) then
@@ -443,7 +437,6 @@ end
 function checkingNewPilot()
 	timer.scheduleFunction(checkingNewPilot, nil, timer.getTime() + 10)
 	--Looking for red helicopter group
-	--trigger.action.outText("red", 2 )
 	for i, gp in pairs(coalition.getGroups(1)) do
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
@@ -452,7 +445,6 @@ function checkingNewPilot()
 	end
 
 	--Looking for blue groups
-	--trigger.action.outText("blue", 2 )
 	for i, gp in pairs(coalition.getGroups(2)) do
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
