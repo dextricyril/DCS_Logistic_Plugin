@@ -176,8 +176,8 @@ function HelicoPlayer:embarkTroop(tableData)
 	env.info("embarkTroop")
 	table.insert(self.troopInside, tableData)
 	self:setCommMenuDone(false)
-	env.info("check " ..self.troopInside[1]["name"])
-	trigger.action.outTextForGroup(self:getGroup():getID(),troopGroupName .. " is now inside " .. helicoPlayerName,15)
+	env.info("check " ..tableData["name"] .." " .. self.troopInside[1]["name"])
+	trigger.action.outTextForGroup(self:getGroup():getID(),tableData["name"] .. " is now inside " .. self:getName(),15)
 	env.info("embarkTroop end")
 end
 
@@ -443,7 +443,7 @@ end
 function checkingNewPilot()
 	timer.scheduleFunction(checkingNewPilot, nil, timer.getTime() + 10)
 	--Looking for red helicopter group
-	trigger.action.outText("red", 2 )
+	--trigger.action.outText("red", 2 )
 	for i, gp in pairs(coalition.getGroups(1)) do
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
@@ -452,7 +452,7 @@ function checkingNewPilot()
 	end
 
 	--Looking for blue groups
-	trigger.action.outText("blue", 2 )
+	--trigger.action.outText("blue", 2 )
 	for i, gp in pairs(coalition.getGroups(2)) do
 		-- if group is chopper
 		if Group.getCategory(gp) == 1 then
