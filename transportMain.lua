@@ -172,12 +172,28 @@ function HelicoPlayer:canEmbarkTroop(tableData)
 	
 end
 
+function HelicoPlayer:getNumberOfTroop()
+	local currentNumberOfTroop = 0
+	for _,troop in ipairs (self.troopInside) do -- troop is formated as groupData
+		currentNumberOfTroop = currentNumberOfTroop + table.maxn(troop["units"])
+	end
+	return currentNumberOfTroop
+end
+
+function HelicoPlayer:setMassInternal()
+	local currentNumberOfTroop = self:getNumberOfTroop()
+	-- counting 200 kilo for soldier + equipement
+	trigger.action.setUnitInternalCargo(self:getName(), 200 * currentNumberOfTroop)
+end
+
 function HelicoPlayer:embarkTroop(tableData)
 	env.info("embarkTroop")
 	table.insert(self.troopInside, tableData)
 	self:setCommMenuDone(false)
 	env.info("check " ..tableData["name"] .." " .. self.troopInside[1]["name"])
 	trigger.action.outTextForGroup(self:getGroup():getID(),tableData["name"] .. " is now inside " .. self:getName(),15)
+	env.info("embarkTroop set mass")
+	self:setMassInternal()
 	env.info("embarkTroop end")
 end
 
@@ -186,6 +202,7 @@ function HelicoPlayer:checkTroopInside()
 		env.info("Carrying group: " .. troop["name"])
 		trigger.action.outTextForGroup(self:getGroup():getID(),"Carrying group: " .. troop["name"],10)
 	end
+	trigger.action.outTextForGroup(self:getGroup():getID(),self:getNumberOfTroop() .. " infantry unit on board",10)
 end
 
 function HelicoPlayer:setDisembarkingTroopsCoordinates()
@@ -222,6 +239,8 @@ function HelicoPlayer:disembarkTroop()
 	end
 	--empty troop list
 	self.troopInside = {}
+	env.info("disembarkTroop set mass")
+	self:setMassInternal()
 	env.info("spawn troop end")
 end
 
