@@ -503,6 +503,54 @@ function isGroupInfantryOnly(group)
 	return true
 end
 
+--CRATE CLASS
+-- Put units in crate and ship them via sling loading
+CrateClass = {}
+CrateClass.__index = CrateClass
+
+-- Derived class method new
+function CrateClass:new(creatorGroupID, unitObj)
+env.info("CrateClass:new")
+   local self = {}
+   setmetatable(self, CrateClass)
+   self.unitName = unitObj:getName()
+   self.unitDesc = unitObj:getDesc()
+   -- print complete description
+	for desc, info in pairs(self.unitDesc) do
+		env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
+	end 
+   self.mass = unitObj:getDesc()["massEmpty"]
+   if (self.mass ~= nil) then
+		env.info("New box for "..self.unitName .." mass in kg: " .. self.mass)
+		trigger.action.outTextForGroup(creatorGroupID,"New box for "..self.unitName .." mass in kg: " .. self.mass,15)
+	else
+		env.info("New box for "..self.unitName .." mass without known mass: ")
+		trigger.action.outTextForGroup(creatorGroupID,"New box for "..self.unitName .." mass without known mass: ",15)
+	end
+
+
+   return self
+end
+--CRATE GROUP CLASS
+
+CrateGroupClass = {}
+CrateGroupClass.__index = CrateGroupClass
+
+-- Derived class method new
+function CrateGroupClass:new(creatorGroupID, groupObj)
+	env.info("CrateGroupClass:new")
+   local self = {}
+   setmetatable(self, CrateGroupClass)
+   self.groupUnit={}
+   for _,unit in pairs(groupObj:getUnits()) do
+		env.info("new crate add")
+		local newCrate = CrateClass:new(creatorGroupID,unit)
+		table.insert(self.groupUnit, newCrate)
+   end
+   return self
+end
+
+
 --MAIN TEXT
 
 env.setErrorMessageBoxEnabled(false)
@@ -512,5 +560,11 @@ trigger.action.outText("Search for groups", 2)
 timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 
 trigger.action.outText("Find players in helicopter", 2)
+
+-- Testing Crate
+heliCargo = Group.getByName("HeliCrate")
+apcGroup = Group.getByName("APC")
+
+crateGroup = CrateGroupClass:new(heliCargo:getID(),apcGroup)
 
 checkingNewPilot()
