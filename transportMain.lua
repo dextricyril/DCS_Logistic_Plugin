@@ -182,8 +182,12 @@ end
 
 function HelicoPlayer:setMassInternal()
 	local currentNumberOfTroop = self:getNumberOfTroop()
-	-- counting 200 kilo for soldier + equipement
-	trigger.action.setUnitInternalCargo(self:getName(), 200 * currentNumberOfTroop)
+	-- counting 120 kilo for soldier + equipement
+	trigger.action.setUnitInternalCargo(self:getName(), 120 * currentNumberOfTroop)
+end
+
+function HelicoPlayer:getMassInternal()
+	return 120 * self:getNumberOfTroop()
 end
 
 function HelicoPlayer:embarkTroop(tableData)
@@ -203,6 +207,7 @@ function HelicoPlayer:checkTroopInside()
 		trigger.action.outTextForGroup(self:getGroup():getID(),"Carrying group: " .. troop["name"],10)
 	end
 	trigger.action.outTextForGroup(self:getGroup():getID(),self:getNumberOfTroop() .. " infantry unit on board",10)
+	trigger.action.outTextForGroup(self:getGroup():getID(),"Internal weight is " .. self:getMassInternal(),10)
 end
 
 function HelicoPlayer:setDisembarkingTroopsCoordinates()
