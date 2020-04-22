@@ -298,7 +298,10 @@ function HelicoPlayer:getNearbyGroups()
 		trigger.action.outTextForGroup(self:getGroup():getID(),"Can carry troop: " .. troopGroup:getName(),5)
 		--trigger.action.outText(" nearby troop : " .. troopGroup:getName(),5)
 	end
-	
+	for index,groundGroup in pairs(nearbyGroups["groundUnits"]) do
+		env.info(" nearby unit group " .. groundGroup:getName())
+		trigger.action.outTextForGroup(self:getGroup():getID(),"Can pack group : " .. groundGroup:getName(),5)
+	end	
 	return nearbyGroups
 end
 
@@ -433,6 +436,15 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 		env.info("Adding radio to " ..  group:getName() .."  for  " .. troopGroup:getName())
 		
 		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup:getName(), troopMenu,troopLoad , {helicoPlayer:getName() , troopGroup:getName()})
+	end
+	local groundUnitMenu = missionCommands.addSubMenuForGroup(groupID, "Ground unit mouvement", rootF10)
+	--packing tank
+	local listOfUnit = helicoPlayer:getNearbyGroups()["groundUnits"]
+	local packGroupCommandList = {}
+	for index,groundGroup in ipairs(listOfUnit) do
+		env.info("Adding radio to " ..  group:getName() .."  for  " .. groundGroup:getName())
+		
+		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Packing ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName()})
 	end
 	--TODO ADD CARGO
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
@@ -585,15 +597,15 @@ function CrateClass:spawnCrates()
 	env.info(" spawnCratesEND")
 end
 
+-- remove the crate and return the unit information
 function CrateClass:unpackUnit_destroyCase()
 	env.info("unpackUnit")
 	position = self.crateObject:getPosition().p
 	env.info("unpackUnit coord " .. position.x .."   Z" .. position.z)
-	timer.scheduleFunction(unpackUnit_SpawnUnit, {position,self.unitCountry, self.unitDesc}, timer.getTime() + 2)
 	self.crateObject:destroy()
 	
 	self.unitDesc["y"] =  position.z
-	self.unitDesc["x"] =  position.x
+	self.unitDesc["x"] =  position.x 
 	
 	for def,unitInfo in pairs(self.unitDesc) do
 		env.info("CrateClass:UNIT:descriptors " .. tostring(def) .. " info " .. tostring(unitInfo))
@@ -603,13 +615,6 @@ function CrateClass:unpackUnit_destroyCase()
 	return self.unitDesc
 end
 
-function unpackUnit_SpawnUnit(positionArgs)
-	env.info("unpackUnit_SpawnUnit")
-	local position = positionArgs[1]
-	env.info("unpackUnit_SpawnUnit coord " .. position.x .."   Z" .. position.z)
-	local description = positionArgs[2]
-	
-end
 
 --CRATE GROUP LIST GLOBAL VARIABLE
 CrateGroupList = {}
@@ -626,7 +631,6 @@ function CrateGroupClass:new(creatorGroupID, groupObj)
    self.groupUnit={}
    self.groupID = groupObj:getID()
    self.groupName = groupObj:getName()
-   self.groupDescription = getTableGroup(groupObj,groupObj:getUnit(1):getPosition().p,nil)
    
    self.groupCountry =  groupObj:getUnit(1):getCountry()
    self.groupCategory = groupObj:getCategory()
@@ -650,42 +654,11 @@ function CrateGroupClass:getGroupID()
 end
 
 
-function printUnitDesc(group) -- String with unit type
-	env.info("printUnitDesc")
-	for index, unit in pairs(group:getUnits()) do
-		env.info("BatumiBlue" .. Unit.getTypeName(unit))
-		completeDesc = unit:getDesc()
-		for desc, info in pairs(completeDesc) do
-			env.info("descriptors " .. tostring(desc) .. " info " .. tostring(info))
-		end
-	end
-end
-
 function CrateGroupClass:unpackGroup()
 	env.info("unpackGroup")
-	self.groupDescription["units"] = {} -- reset units
-	env.info("unpackGroup add " .. table.maxn(self.groupDescription["units"]))
-	-- for num,unit in pairs(self.groupUnit) do
-		-- env.info("unpack " .. tostring(num))
-		-- local unitInfo = unit:unpackUnit_destroyCase()
-		-- table.insert(self.groupDescription["units"], unitInfo)
-   -- end
-   
-   -- env.info("unpackGroup add " .. table.maxn(self.groupDescription["units"]))
-	-- for def,info in pairs(self.groupDescription) do
-		-- env.info("descriptors " .. tostring(def) .. " info " .. tostring(info))
-	-- end
-	-- for def,unitInfo in pairs(self.groupDescription["units"]) do
-		-- env.info("UNIT:descriptors " .. tostring(def) .. " info " .. tostring(unitInfo))
-		-- for unitDef,unitInfoDeep in pairs(unitInfo) do
-			-- env.info("DEEP ".. tostring(unitDef) .. "  " .. " cont " ..  tostring(unitInfoDeep))
-		-- end 
-	-- end
 	
 	env.info("NEW group info " .. self.groupCountry .. "    "  .. self.groupCategory)
-	pointPositionY = self.groupDescription["units"]["y"]
-	pointPositionX = self.groupDescription["units"]["x"]
-	
+
 	local groupData = {
 		["visible"] = true,
 		["taskSelected"] = true,
@@ -701,8 +674,8 @@ function CrateGroupClass:unpackGroup()
 		{
 		
 		}, -- end of ["units"]
-		["y"] = pointPositionY,
-		["x"] = pointPositionX,
+		["y"] = 5000,
+		["x"] = 5000,
 		["name"] = self.groupName,
 		["start_time"] = 0,
 		["task"] = "Ground Nothing",
@@ -715,19 +688,17 @@ function CrateGroupClass:unpackGroup()
 		table.insert(groupData["units"], unitInfo)
    end
 
-   newGroup = coalition.addGroup(self.groupCountry,self.groupCategory,groupData)
-   printUnitDesc(newGroup)
-   
-   env.info("unpackGroup end")
+	groupData["x"] = groupData["units"]["x"]
+	groupData["y"] = groupData["units"]["y"]
+	newGroup = coalition.addGroup(self.groupCountry,self.groupCategory,groupData)
+
+	env.info("unpackGroup end")
 end
 
 function getCrateGroup(groupID)
 	env.info("getCrateGroup " .. groupID)
 	return CrateGroupList[groupID]
 end
-
-
-
 
 function lateCrateSpawn(argsTable) -- [1] is groupID
 	env.info(" lateCrateSpawn " .. argsTable[1])
@@ -740,9 +711,14 @@ function lateCrateSpawn(argsTable) -- [1] is groupID
 	end
 end
 
-
-
-
+function radioPackUnits(args)
+	local heliGroupID = args[1] -- ID of chopper 
+	local groundUnitGroup = Group.getByName(args[2]) -- name of ground group
+	env.info("radioPackUnits " .. heliGroupID .. "    " .. groundUnitGroup:getName())
+	local crateGroup =  CrateGroupClass:new(heliGroupID,groundUnitGroup)
+	env.info(" INSERTING IN " .. crateGroup:getGroupID())
+	table.insert(CrateGroupList,crateGroup:getGroupID(),  crateGroup)
+end
 
 --MAIN TEXT
 
@@ -755,44 +731,44 @@ timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 trigger.action.outText("Find players in helicopter", 2)
 
 -- Testing Crate
-heliCargo = Group.getByName("HeliCrate")
-apcGroup = Group.getByName("APC")
-carGroup = Group.getByName("CARS")
+-- heliCargo = Group.getByName("HeliCrate")
+-- apcGroup = Group.getByName("APC")
+-- carGroup = Group.getByName("CARS")
 
-crateGroupAPC = CrateGroupClass:new(heliCargo:getID(),apcGroup)
-crateGroupCAR = CrateGroupClass:new(heliCargo:getID(),carGroup)
+-- crateGroupAPC = CrateGroupClass:new(heliCargo:getID(),apcGroup)
+-- crateGroupCAR = CrateGroupClass:new(heliCargo:getID(),carGroup)
 
-table.insert(CrateGroupList,crateGroupAPC:getGroupID(),  crateGroupAPC)
-table.insert(CrateGroupList, crateGroupCAR:getGroupID() ,crateGroupCAR)
+-- table.insert(CrateGroupList,crateGroupAPC:getGroupID(),  crateGroupAPC)
+--table.insert(CrateGroupList, crateGroupCAR:getGroupID() ,crateGroupCAR)
 
-crate = StaticObject.getByName("UH-1Hcargo")
-ISOcontainersmall = StaticObject.getByName("ISOcontainersmall")
+-- crate = StaticObject.getByName("UH-1Hcargo")
+-- ISOcontainersmall = StaticObject.getByName("ISOcontainersmall")
 
-for desc, info in pairs(crate:getDesc()) do
-	env.info("descCrate " .. tostring(desc) .. " info " .. tostring(info))
-end 
+-- for desc, info in pairs(crate:getDesc()) do
+	-- env.info("descCrate " .. tostring(desc) .. " info " .. tostring(info))
+-- end 
 
 
-for desc, info in pairs(crate:getDesc()["attributes"]) do
-	env.info("attributes " .. tostring(desc) .. " info " .. tostring(info))
-end 
+-- for desc, info in pairs(crate:getDesc()["attributes"]) do
+	-- env.info("attributes " .. tostring(desc) .. " info " .. tostring(info))
+-- end 
 
-for desc, info in pairs(crate:getDesc()["box"]["min"]) do
-	env.info("box minimal " .. tostring(desc) .. " info " .. tostring(info))
-end 
+-- for desc, info in pairs(crate:getDesc()["box"]["min"]) do
+	-- env.info("box minimal " .. tostring(desc) .. " info " .. tostring(info))
+-- end 
 
-for desc, info in pairs(crate:getDesc()["box"]) do
-	env.info("box " .. tostring(desc) .. " info " .. tostring(info))
-end 
+-- for desc, info in pairs(crate:getDesc()["box"]) do
+	-- env.info("box " .. tostring(desc) .. " info " .. tostring(info))
+-- end 
 
-for desc, info in pairs(ISOcontainersmall:getDesc()) do
-	env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
-end 
+-- for desc, info in pairs(ISOcontainersmall:getDesc()) do
+	-- env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
+-- end 
 
-function retardTestRestore()
-	crateGroupCAR:unpackGroup()
-end
+-- function retardTestRestore()
+	-- crateGroupCAR:unpackGroup()
+-- end
 
-timer.scheduleFunction(retardTestRestore, nil,timer.getTime() + 12)
+-- timer.scheduleFunction(retardTestRestore, nil,timer.getTime() + 12)
 
 checkingNewPilot()
