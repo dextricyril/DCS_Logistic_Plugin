@@ -68,6 +68,8 @@ function getTableGroup(groupParam,pointPosition,heading)
 	return groupData
 end
 
+
+
 -- GLOBAL VARIABLES
 HelicoPlayerList = {}
 
@@ -526,7 +528,20 @@ env.info("CrateClass:new")
    self.initialX = unitObj:getPosition().p.x
    --unit 
    self.unitName = unitObj:getName()
-   self.unitDesc = unitObj:getDesc()
+   self.unitDesc = {
+			["type"] = unitObj:getTypeName(),
+		["transportable"] = 
+		{
+			["randomTransportable"] = true,
+		}, -- end of ["transportable"]
+		["unitId"] = unitObj:getID(),
+		["skill"] = "Average",
+		["y"] = unitObj:getPosition().p.z,
+		["x"] = unitObj:getPosition().p.x,
+		["name"] = unitObj:getName(),
+		["heading"] = 0,
+		["playerCanDrive"] = true,
+   }
    self.unitCountry =  unitObj:getCountry()
    -- print complete description
 	for desc, info in pairs(self.unitDesc) do
@@ -570,6 +585,32 @@ function CrateClass:spawnCrates()
 	env.info(" spawnCratesEND")
 end
 
+function CrateClass:unpackUnit_destroyCase()
+	env.info("unpackUnit")
+	position = self.crateObject:getPosition().p
+	env.info("unpackUnit coord " .. position.x .."   Z" .. position.z)
+	timer.scheduleFunction(unpackUnit_SpawnUnit, {position,self.unitCountry, self.unitDesc}, timer.getTime() + 2)
+	self.crateObject:destroy()
+	
+	self.unitDesc["y"] =  position.z
+	self.unitDesc["x"] =  position.x
+	
+	for def,unitInfo in pairs(self.unitDesc) do
+		env.info("CrateClass:UNIT:descriptors " .. tostring(def) .. " info " .. tostring(unitInfo))
+	end
+	env.info("unpackUnit end")
+	
+	return self.unitDesc
+end
+
+function unpackUnit_SpawnUnit(positionArgs)
+	env.info("unpackUnit_SpawnUnit")
+	local position = positionArgs[1]
+	env.info("unpackUnit_SpawnUnit coord " .. position.x .."   Z" .. position.z)
+	local description = positionArgs[2]
+	
+end
+
 --CRATE GROUP LIST GLOBAL VARIABLE
 CrateGroupList = {}
 
@@ -584,6 +625,11 @@ function CrateGroupClass:new(creatorGroupID, groupObj)
    setmetatable(self, CrateGroupClass)
    self.groupUnit={}
    self.groupID = groupObj:getID()
+   self.groupName = groupObj:getName()
+   self.groupDescription = getTableGroup(groupObj,groupObj:getUnit(1):getPosition().p,nil)
+   
+   self.groupCountry =  groupObj:getUnit(1):getCountry()
+   self.groupCategory = groupObj:getCategory()
    
    for _,unit in pairs(groupObj:getUnits()) do
 		env.info("new crate add")
@@ -603,10 +649,85 @@ function CrateGroupClass:getGroupID()
 	return self.groupID
 end
 
+
+function printUnitDesc(group) -- String with unit type
+	env.info("printUnitDesc")
+	for index, unit in pairs(group:getUnits()) do
+		env.info("BatumiBlue" .. Unit.getTypeName(unit))
+		completeDesc = unit:getDesc()
+		for desc, info in pairs(completeDesc) do
+			env.info("descriptors " .. tostring(desc) .. " info " .. tostring(info))
+		end
+	end
+end
+
+function CrateGroupClass:unpackGroup()
+	env.info("unpackGroup")
+	self.groupDescription["units"] = {} -- reset units
+	env.info("unpackGroup add " .. table.maxn(self.groupDescription["units"]))
+	-- for num,unit in pairs(self.groupUnit) do
+		-- env.info("unpack " .. tostring(num))
+		-- local unitInfo = unit:unpackUnit_destroyCase()
+		-- table.insert(self.groupDescription["units"], unitInfo)
+   -- end
+   
+   -- env.info("unpackGroup add " .. table.maxn(self.groupDescription["units"]))
+	-- for def,info in pairs(self.groupDescription) do
+		-- env.info("descriptors " .. tostring(def) .. " info " .. tostring(info))
+	-- end
+	-- for def,unitInfo in pairs(self.groupDescription["units"]) do
+		-- env.info("UNIT:descriptors " .. tostring(def) .. " info " .. tostring(unitInfo))
+		-- for unitDef,unitInfoDeep in pairs(unitInfo) do
+			-- env.info("DEEP ".. tostring(unitDef) .. "  " .. " cont " ..  tostring(unitInfoDeep))
+		-- end 
+	-- end
+	
+	env.info("NEW group info " .. self.groupCountry .. "    "  .. self.groupCategory)
+	pointPositionY = self.groupDescription["units"]["y"]
+	pointPositionX = self.groupDescription["units"]["x"]
+	
+	local groupData = {
+		["visible"] = true,
+		["taskSelected"] = true,
+		["route"] = 
+		{
+		}, -- end of ["route"]
+		["groupId"] = self.groupID,
+		["tasks"] = 
+		{
+		}, -- end of ["tasks"]
+		["hidden"] = false,
+		["units"] = 
+		{
+		
+		}, -- end of ["units"]
+		["y"] = pointPositionY,
+		["x"] = pointPositionX,
+		["name"] = self.groupName,
+		["start_time"] = 0,
+		["task"] = "Ground Nothing",
+		["country"] = self.groupCountry
+	} -- end of [1]
+	
+	for num,unit in pairs(self.groupUnit) do
+		env.info("unpack " .. tostring(num))
+		local unitInfo = unit:unpackUnit_destroyCase()
+		table.insert(groupData["units"], unitInfo)
+   end
+
+   newGroup = coalition.addGroup(self.groupCountry,self.groupCategory,groupData)
+   printUnitDesc(newGroup)
+   
+   env.info("unpackGroup end")
+end
+
 function getCrateGroup(groupID)
 	env.info("getCrateGroup " .. groupID)
 	return CrateGroupList[groupID]
 end
+
+
+
 
 function lateCrateSpawn(argsTable) -- [1] is groupID
 	env.info(" lateCrateSpawn " .. argsTable[1])
@@ -618,6 +739,11 @@ function lateCrateSpawn(argsTable) -- [1] is groupID
 		crateObject:spawnCrates()
 	end
 end
+
+
+
+
+
 --MAIN TEXT
 
 env.setErrorMessageBoxEnabled(false)
@@ -662,5 +788,11 @@ end
 for desc, info in pairs(ISOcontainersmall:getDesc()) do
 	env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
 end 
+
+function retardTestRestore()
+	crateGroupCAR:unpackGroup()
+end
+
+timer.scheduleFunction(retardTestRestore, nil,timer.getTime() + 12)
 
 checkingNewPilot()
