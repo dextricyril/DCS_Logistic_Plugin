@@ -305,6 +305,28 @@ function HelicoPlayer:getNearbyGroups()
 	return nearbyGroups
 end
 
+function HelicoPlayer:getCloseCrates()
+
+	local positionList = {}
+	local completeCrateList = getAllCrates()
+	for index,crate in pairs(completeCrateList) do
+		env.info("plop ")
+		env.info("plop " .. crate:getName() )
+		local distance = getDistance(crate,self:getUnit())
+		env.info("plop " .. distance )
+		if( distance < 50) then
+			table.insert(positionList,distance,crate)
+		end
+		--positionList.insert()
+	end
+	table.sort(positionList)
+	for index,crate in pairs(positionList) do
+		env.info("getCloseCrates " .. index .. "  crate Name   " .. crate:getName())
+	end
+	return positionList
+	
+end
+
 function printHelicoList()
 	env.info("printHelicoList " ..table.maxn(HelicoPlayerList))
 	for index,helo in ipairs (HelicoPlayerList) do
@@ -438,7 +460,7 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 		loadTroopCommandList[index] = missionCommands.addCommandForGroup(groupID, "Embark ".. troopGroup:getName(), troopMenu,troopLoad , {helicoPlayer:getName() , troopGroup:getName()})
 	end
 	local groundUnitMenu = missionCommands.addSubMenuForGroup(groupID, "Ground unit mouvement", rootF10)
-	--packing tank
+	--packing tank and ground units
 	local listOfUnit = helicoPlayer:getNearbyGroups()["groundUnits"]
 	local packGroupCommandList = {}
 	for index,groundGroup in ipairs(listOfUnit) do
@@ -446,7 +468,10 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 		
 		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Packing ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName()})
 	end
-	--TODO ADD CARGO
+	
+	-- unpacking
+	helicoPlayer:getCloseCrates()
+	
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
 	
 	env.info("addRadioF10OptionsForGroup finnish")
@@ -653,6 +678,30 @@ function CrateGroupClass:getGroupID()
 	return self.groupID
 end
 
+function CrateGroupClass:getCratePositions()
+	env.info("getCratePositions " .. self.groupName)
+	local positionList = {}
+	for num,unit in pairs(self.groupUnit) do
+		env.info("num " .. num)
+		if(unit.crateObject ~= nil) then 
+			env.info("NAME " .. num)
+			table.insert(positionList,unit.crateObject)
+		end
+	end
+	env.info("getCratePositions " .. table.maxn(positionList))
+	return positionList
+end
+
+function getAllCrates()
+	local completeCrateList = {}
+	for index,crateGroup  in pairs(CrateGroupList) do
+		local crateListGroup = crateGroup:getCratePositions()
+		for _,crate in pairs(crateListGroup) do
+			table.insert(completeCrateList,crate)
+		end
+	end
+	return completeCrateList
+end
 
 function CrateGroupClass:unpackGroup()
 	env.info("unpackGroup")
@@ -719,6 +768,7 @@ function radioPackUnits(args)
 	env.info(" INSERTING IN " .. crateGroup:getGroupID())
 	table.insert(CrateGroupList,crateGroup:getGroupID(),  crateGroup)
 end
+
 
 --MAIN TEXT
 
