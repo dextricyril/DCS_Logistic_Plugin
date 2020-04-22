@@ -523,16 +523,36 @@ env.info("CrateClass:new")
    if (self.mass ~= nil) then
 		env.info("New box for "..self.unitName .." mass in kg: " .. self.mass)
 		trigger.action.outTextForGroup(creatorGroupID,"New box for "..self.unitName .." mass in kg: " .. self.mass,15)
+		if self.mass > 5000 then 
+			trigger.action.outTextForGroup(creatorGroupID,"Probably wont be able to carry "..self.unitName,15)
+		end
 	else
 		env.info("New box for "..self.unitName .." mass without known mass: ")
 		trigger.action.outTextForGroup(creatorGroupID,"New box for "..self.unitName .." mass without known mass: ",15)
+		self.mass = 1000 -- default weight
 	end
 
-
+	local crate_template= {
+		["category"] = "Cargos", --now plurar
+		["shape_name"] = "bw_container_cargo", --new slingloadable container
+		["type"] = "container_cargo", --new type
+	    ["unitId"] = 8001, -- ABSOLUTELY NEEDS TO BE UNIQUE
+		["y"] = unitObj:getPosition().p.z,
+		["x"] = unitObj:getPosition().p.x,
+		["mass"] = self.mass,
+		["name"] =  "Packed_" .. self.unitName,
+		["canCargo"] = true,
+		["heading"] = 0,
+	}
+	env.info("Pos x ".. crate_template["x"] .. "Pos y ".. crate_template["y"])
+	self.crateObject = coalition.addStaticObject(unitObj:getCountry(),crate_template)
+	
    return self
 end
---CRATE GROUP CLASS
+--CRATE GROUP LIST GLOBAL VARIABLE
+CrateGroupList = {}
 
+--CRATE GROUP CLASS
 CrateGroupClass = {}
 CrateGroupClass.__index = CrateGroupClass
 
@@ -547,6 +567,7 @@ function CrateGroupClass:new(creatorGroupID, groupObj)
 		local newCrate = CrateClass:new(creatorGroupID,unit)
 		table.insert(self.groupUnit, newCrate)
    end
+	
    return self
 end
 
@@ -564,7 +585,35 @@ trigger.action.outText("Find players in helicopter", 2)
 -- Testing Crate
 heliCargo = Group.getByName("HeliCrate")
 apcGroup = Group.getByName("APC")
+carGroup = Group.getByName("CARS")
 
 crateGroup = CrateGroupClass:new(heliCargo:getID(),apcGroup)
+crateGroup = CrateGroupClass:new(heliCargo:getID(),carGroup)
+table.insert(CrateGroupList, crateGroup)
+table.insert(CrateGroupList, carGroup)
+
+crate = StaticObject.getByName("UH-1Hcargo")
+ISOcontainersmall = StaticObject.getByName("ISOcontainersmall")
+
+for desc, info in pairs(crate:getDesc()) do
+	env.info("descCrate " .. tostring(desc) .. " info " .. tostring(info))
+end 
+
+
+for desc, info in pairs(crate:getDesc()["attributes"]) do
+	env.info("attributes " .. tostring(desc) .. " info " .. tostring(info))
+end 
+
+for desc, info in pairs(crate:getDesc()["box"]["min"]) do
+	env.info("box minimal " .. tostring(desc) .. " info " .. tostring(info))
+end 
+
+for desc, info in pairs(crate:getDesc()["box"]) do
+	env.info("box " .. tostring(desc) .. " info " .. tostring(info))
+end 
+
+for desc, info in pairs(ISOcontainersmall:getDesc()) do
+	env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
+end 
 
 checkingNewPilot()
