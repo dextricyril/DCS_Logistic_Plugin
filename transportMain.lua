@@ -521,8 +521,13 @@ function CrateClass:new(creatorGroupID, unitObj)
 env.info("CrateClass:new")
    local self = {}
    setmetatable(self, CrateClass)
+   --Get initial unit position
+   self.initialY = unitObj:getPosition().p.z
+   self.initialX = unitObj:getPosition().p.x
+   --unit 
    self.unitName = unitObj:getName()
    self.unitDesc = unitObj:getDesc()
+   self.unitCountry =  unitObj:getCountry()
    -- print complete description
 	for desc, info in pairs(self.unitDesc) do
 		env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
@@ -539,24 +544,32 @@ env.info("CrateClass:new")
 		trigger.action.outTextForGroup(creatorGroupID,"New box for "..self.unitName .." mass without known mass: ",15)
 		self.mass = 1000 -- default weight
 	end
+	
+	self.crateObject = nil -- no crates created yet
+   return self
+end
 
+
+
+function CrateClass:spawnCrates()
+	env.info("spawnCrates")
 	local crate_template= {
 		["category"] = "Cargos", --now plurar
 		["shape_name"] = "bw_container_cargo", --new slingloadable container
 		["type"] = "container_cargo", --new type
 	    ["unitId"] = getUniqueID(), -- ABSOLUTELY NEEDS TO BE UNIQUE
-		["y"] = unitObj:getPosition().p.z,
-		["x"] = unitObj:getPosition().p.x,
+		["y"] = self.initialY,
+		["x"] = self.initialX,
 		["mass"] = self.mass,
 		["name"] =  "Packed_" .. self.unitName,
 		["canCargo"] = true,
 		["heading"] = 0,
 	}
 	env.info("Pos x ".. crate_template["x"] .. "Pos y ".. crate_template["y"])
-	self.crateObject = coalition.addStaticObject(unitObj:getCountry(),crate_template)
-	
-   return self
+	self.crateObject = coalition.addStaticObject(self.unitCountry,crate_template)
+	env.info(" spawnCratesEND")
 end
+
 --CRATE GROUP LIST GLOBAL VARIABLE
 CrateGroupList = {}
 
@@ -570,16 +583,41 @@ function CrateGroupClass:new(creatorGroupID, groupObj)
    local self = {}
    setmetatable(self, CrateGroupClass)
    self.groupUnit={}
+   self.groupID = groupObj:getID()
+   
    for _,unit in pairs(groupObj:getUnits()) do
 		env.info("new crate add")
 		local newCrate = CrateClass:new(creatorGroupID,unit)
-		table.insert(self.groupUnit, newCrate)
+		table.insert(self.groupUnit,  newCrate)
    end
+   
+   groupObj:destroy()
+   -- ask for crates late activation
+	timer.scheduleFunction(lateCrateSpawn, {self.groupID}, timer.getTime() + 2)
 	
    return self
 end
 
+function CrateGroupClass:getGroupID()
+	env.info("getGroupID " .. self.groupID)
+	return self.groupID
+end
 
+function getCrateGroup(groupID)
+	env.info("getCrateGroup " .. groupID)
+	return CrateGroupList[groupID]
+end
+
+function lateCrateSpawn(argsTable) -- [1] is groupID
+	env.info(" lateCrateSpawn " .. argsTable[1])
+	local groupID = argsTable[1]
+	local crateGroupNotSpawnYet = getCrateGroup(groupID)
+	env.info(" crateGroupNotSpawnYet " .. table.maxn(crateGroupNotSpawnYet.groupUnit))
+	
+	for _,crateObject in pairs(crateGroupNotSpawnYet.groupUnit) do
+		crateObject:spawnCrates()
+	end
+end
 --MAIN TEXT
 
 env.setErrorMessageBoxEnabled(false)
@@ -595,10 +633,11 @@ heliCargo = Group.getByName("HeliCrate")
 apcGroup = Group.getByName("APC")
 carGroup = Group.getByName("CARS")
 
-crateGroup = CrateGroupClass:new(heliCargo:getID(),apcGroup)
-crateGroup = CrateGroupClass:new(heliCargo:getID(),carGroup)
-table.insert(CrateGroupList, crateGroup)
-table.insert(CrateGroupList, carGroup)
+crateGroupAPC = CrateGroupClass:new(heliCargo:getID(),apcGroup)
+crateGroupCAR = CrateGroupClass:new(heliCargo:getID(),carGroup)
+
+table.insert(CrateGroupList,crateGroupAPC:getGroupID(),  crateGroupAPC)
+table.insert(CrateGroupList, crateGroupCAR:getGroupID() ,crateGroupCAR)
 
 crate = StaticObject.getByName("UH-1Hcargo")
 ISOcontainersmall = StaticObject.getByName("ISOcontainersmall")
