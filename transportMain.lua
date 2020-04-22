@@ -15,6 +15,14 @@ function getDistance(unit1, unit2)
 	return (xDiff^2 + yDiff^2 + zDiff^2)^0.5 
 end
 
+-- global variable to generate unique ID
+uniqueIDCurrent = 8000
+function getUniqueID()
+	uniqueIDCurrent = uniqueIDCurrent +1
+	return uniqueIDCurrent
+end
+
+
 -- SAVE GROUP TABLE 
 function getTableGroup(groupParam,pointPosition,heading)
 
@@ -536,7 +544,7 @@ env.info("CrateClass:new")
 		["category"] = "Cargos", --now plurar
 		["shape_name"] = "bw_container_cargo", --new slingloadable container
 		["type"] = "container_cargo", --new type
-	    ["unitId"] = 8001, -- ABSOLUTELY NEEDS TO BE UNIQUE
+	    ["unitId"] = getUniqueID(), -- ABSOLUTELY NEEDS TO BE UNIQUE
 		["y"] = unitObj:getPosition().p.z,
 		["x"] = unitObj:getPosition().p.x,
 		["mass"] = self.mass,
