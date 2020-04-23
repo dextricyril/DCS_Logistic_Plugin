@@ -485,17 +485,17 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	for index,groundGroup in ipairs(listOfUnit) do
 		env.info("Adding radio to " ..  group:getName() .."  for  " .. groundGroup:getName())
 		
-		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Pack unit group ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName()})
+		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Pack unit group ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName(),helicoPlayer:getName()})
 	end
 	
 	-- unpacking
 	--helicoPlayer:getCloseCrates()
-	local crateGroupList = helicoPlayer:findCloseGroups()
+	local crateGrList = helicoPlayer:findCloseGroups()
 	
-	for index,crateGroup in pairs(crateGroupList) do
+	for index,crateGroup in pairs(crateGrList) do
 		env.info("Adding radio for crateGroup " .. crateGroup.groupName .. "  group id  " .. index)
 		
-		missionCommands.addCommandForGroup(groupID, "Unpack unit group ".. crateGroup.groupName, groundUnitMenu,radioUnpackUnits , {groupID , index})
+		missionCommands.addCommandForGroup(groupID, "Unpack unit group ".. crateGroup.groupName, groundUnitMenu,radioUnpackUnits , {groupID , index, helicoPlayer:getName()})
 	end
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
 	
@@ -742,17 +742,21 @@ function getCloseGroupCratesByDistance(unitPoint)
 	for index,crateGroup  in pairs(CrateGroupList) do
 		--local crateListGroup = crateGroup:getCratePositions()
 		env.info("indexGroup " .. index )
-		for _,crate in pairs(crateGroup.groupUnit) do
-			env.info("checking " )
-			env.info("checking " .. crate.unitName)
-			local position = crate:getCratePosition()
-			env.info("checking " .. position.x .. " unit " .. unitPoint.x)
-			local distance = getDistancePoint(unitPoint, position)
-			if distance < 50 then
-				env.info("checking " .. distance)
-				if completeGroupCrateList[index] == nil then
-					table.insert(completeGroupCrateList,index,crateGroup)
-				--else if ()
+		if(crateGroup == nil) then
+			env.info("indexGroup is nil" )
+		else
+			for _,crate in pairs(crateGroup.groupUnit) do
+				env.info("checking " )
+				env.info("checking " .. crate.unitName)
+				local position = crate:getCratePosition()
+				env.info("checking " .. position.x .. " unit " .. unitPoint.x)
+				local distance = getDistancePoint(unitPoint, position)
+				if distance < 50 then
+					env.info("checking " .. distance)
+					if completeGroupCrateList[index] == nil then
+						table.insert(completeGroupCrateList,index,crateGroup)
+					--else if ()
+					end
 				end
 			end
 		end
@@ -799,13 +803,17 @@ function CrateGroupClass:unpackGroup()
 	groupData["y"] = groupData["units"]["y"]
 	newGroup = coalition.addGroup(self.groupCountry,self.groupCategory,groupData)
 
-	env.info("unpackGroup end")
-	table.remove(CrateGroupList,self.groupID)
-	env.info("unpackGroup end removed")
+	env.info("unpackGroup end " .. table.maxn(CrateGroupList) .. "   " .. self.groupID )
+	--table.remove(CrateGroupList,self.groupID)
+	CrateGroupList[self.groupID] = nil
+	env.info("unpackGroup end removed " ..  table.maxn(CrateGroupList) .. "   "  .. tostring(CrateGroupList[self.groupID]))
 end
 
 function getCrateGroup(groupID)
 	env.info("getCrateGroup " .. groupID)
+	if(CrateGroupList[groupID] == nil) then
+		env.warning("Crate group is now null:  " .. groupID)
+	end
 	return CrateGroupList[groupID]
 end
 
@@ -813,6 +821,10 @@ function lateCrateSpawn(argsTable) -- [1] is groupID
 	env.info(" lateCrateSpawn " .. argsTable[1])
 	local groupID = argsTable[1]
 	local crateGroupNotSpawnYet = getCrateGroup(groupID)
+	if( crateGroupNotSpawnYet == nil) then 
+		-- lua removed value not index from tables
+		return
+	end
 	env.info(" crateGroupNotSpawnYet " .. table.maxn(crateGroupNotSpawnYet.groupUnit))
 	
 	for _,crateObject in pairs(crateGroupNotSpawnYet.groupUnit) do
@@ -827,6 +839,10 @@ function radioPackUnits(args)
 	local crateGroup =  CrateGroupClass:new(heliGroupID,groundUnitGroup)
 	env.info(" INSERTING IN " .. crateGroup:getGroupID())
 	table.insert(CrateGroupList,crateGroup:getGroupID(),  crateGroup)
+	helicoPlayerName = args[3]
+	refreshCommMenu({helicoPlayerName})
+	env.info("end radioPackUnits")
+
 end
 
 function radioUnpackUnits(args)
@@ -840,6 +856,10 @@ function radioUnpackUnits(args)
 		return
 	end
 	crateGroup:unpackGroup()
+	
+	helicoPlayerName = args[3]
+	refreshCommMenu({helicoPlayerName})
+	
 	env.info("end radioUnpackUnits")
 end
 
@@ -852,46 +872,5 @@ trigger.action.outText("Search for groups", 2)
 timer.scheduleFunction(updateAllHelico, nil, timer.getTime() + 3)
 
 trigger.action.outText("Find players in helicopter", 2)
-
--- Testing Crate
--- heliCargo = Group.getByName("HeliCrate")
--- apcGroup = Group.getByName("APC")
--- carGroup = Group.getByName("CARS")
-
--- crateGroupAPC = CrateGroupClass:new(heliCargo:getID(),apcGroup)
--- crateGroupCAR = CrateGroupClass:new(heliCargo:getID(),carGroup)
-
--- table.insert(CrateGroupList,crateGroupAPC:getGroupID(),  crateGroupAPC)
---table.insert(CrateGroupList, crateGroupCAR:getGroupID() ,crateGroupCAR)
-
--- crate = StaticObject.getByName("UH-1Hcargo")
--- ISOcontainersmall = StaticObject.getByName("ISOcontainersmall")
-
--- for desc, info in pairs(crate:getDesc()) do
-	-- env.info("descCrate " .. tostring(desc) .. " info " .. tostring(info))
--- end 
-
-
--- for desc, info in pairs(crate:getDesc()["attributes"]) do
-	-- env.info("attributes " .. tostring(desc) .. " info " .. tostring(info))
--- end 
-
--- for desc, info in pairs(crate:getDesc()["box"]["min"]) do
-	-- env.info("box minimal " .. tostring(desc) .. " info " .. tostring(info))
--- end 
-
--- for desc, info in pairs(crate:getDesc()["box"]) do
-	-- env.info("box " .. tostring(desc) .. " info " .. tostring(info))
--- end 
-
--- for desc, info in pairs(ISOcontainersmall:getDesc()) do
-	-- env.info("desc " .. tostring(desc) .. " info " .. tostring(info))
--- end 
-
--- function retardTestRestore()
-	-- crateGroupCAR:unpackGroup()
--- end
-
--- timer.scheduleFunction(retardTestRestore, nil,timer.getTime() + 12)
 
 checkingNewPilot()
