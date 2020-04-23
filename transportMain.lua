@@ -341,9 +341,9 @@ function HelicoPlayer:findCloseGroups()
 	env.info("findCloseGroups " .. table.maxn(closeCrateGroupsList))
 	
 	for index,crateGroup in pairs(closeCrateGroupsList) do
-	
 		env.info("getCloseCrates " .. index .. "  crate Name   " .. crateGroup.groupName)
 	end
+	return closeCrateGroupsList
 end
 
 function printHelicoList()
@@ -485,13 +485,18 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	for index,groundGroup in ipairs(listOfUnit) do
 		env.info("Adding radio to " ..  group:getName() .."  for  " .. groundGroup:getName())
 		
-		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Packing ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName()})
+		packGroupCommandList[index] = missionCommands.addCommandForGroup(groupID, "Pack unit group ".. groundGroup:getName(), groundUnitMenu,radioPackUnits , {groupID , groundGroup:getName()})
 	end
 	
 	-- unpacking
 	--helicoPlayer:getCloseCrates()
-	helicoPlayer:findCloseGroups()
+	local crateGroupList = helicoPlayer:findCloseGroups()
 	
+	for index,crateGroup in pairs(crateGroupList) do
+		env.info("Adding radio for crateGroup " .. crateGroup.groupName .. "  group id  " .. index)
+		
+		missionCommands.addCommandForGroup(groupID, "Unpack unit group ".. crateGroup.groupName, groundUnitMenu,radioUnpackUnits , {groupID , index})
+	end
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
 	
 	env.info("addRadioF10OptionsForGroup finnish")
@@ -795,6 +800,8 @@ function CrateGroupClass:unpackGroup()
 	newGroup = coalition.addGroup(self.groupCountry,self.groupCategory,groupData)
 
 	env.info("unpackGroup end")
+	table.remove(CrateGroupList,self.groupID)
+	env.info("unpackGroup end removed")
 end
 
 function getCrateGroup(groupID)
@@ -822,6 +829,19 @@ function radioPackUnits(args)
 	table.insert(CrateGroupList,crateGroup:getGroupID(),  crateGroup)
 end
 
+function radioUnpackUnits(args)
+	env.info("radioUnpackUnits")
+	local groupID = args[1]
+	local crateGroupID = args[2]
+	env.info("radioUnpackUnits " .. groupID .. "  " .. crateGroupID)
+	local crateGroup = getCrateGroup(crateGroupID)
+	env.info("radioUnpackUnits " .. crateGroup.groupName)
+	if crateGroup == nil then
+		return
+	end
+	crateGroup:unpackGroup()
+	env.info("end radioUnpackUnits")
+end
 
 --MAIN TEXT
 
