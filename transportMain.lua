@@ -15,6 +15,15 @@ function getDistance(unit1, unit2)
 	return (xDiff^2 + yDiff^2 + zDiff^2)^0.5 
 end
 
+-- get distance between two points
+function getDistancePoint(unit1Point, unit2Point)
+	xDiff = unit1Point.x - unit2Point.x
+	yDiff = unit1Point.y - unit2Point.y
+	zDiff = unit1Point.z - unit2Point.z
+	return (xDiff^2 + yDiff^2 + zDiff^2)^0.5 
+end
+
+
 -- global variable to generate unique ID
 uniqueIDCurrent = 8000
 function getUniqueID()
@@ -327,6 +336,16 @@ function HelicoPlayer:getCloseCrates()
 	
 end
 
+function HelicoPlayer:findCloseGroups()
+	local closeCrateGroupsList = getCloseGroupCratesByDistance(self:getUnit():getPosition().p)
+	env.info("findCloseGroups " .. table.maxn(closeCrateGroupsList))
+	
+	for index,crateGroup in pairs(closeCrateGroupsList) do
+	
+		env.info("getCloseCrates " .. index .. "  crate Name   " .. crateGroup.groupName)
+	end
+end
+
 function printHelicoList()
 	env.info("printHelicoList " ..table.maxn(HelicoPlayerList))
 	for index,helo in ipairs (HelicoPlayerList) do
@@ -470,7 +489,8 @@ function addRadioF10OptionsForGroup(helicoPlayer)
 	end
 	
 	-- unpacking
-	helicoPlayer:getCloseCrates()
+	--helicoPlayer:getCloseCrates()
+	helicoPlayer:findCloseGroups()
 	
 	missionCommands.addCommandForGroup(groupID, "Refresh", rootF10, refreshCommMenu , {helicoPlayer:getName()})
 	
@@ -622,6 +642,13 @@ function CrateClass:spawnCrates()
 	env.info(" spawnCratesEND")
 end
 
+function CrateClass:getCratePosition()
+	env.info("getCratePosition")
+	local position = self.crateObject:getPosition().p
+	env.info("getCratePosition end")
+	return position
+end
+
 -- remove the crate and return the unit information
 function CrateClass:unpackUnit_destroyCase()
 	env.info("unpackUnit")
@@ -701,6 +728,32 @@ function getAllCrates()
 		end
 	end
 	return completeCrateList
+end
+
+-- self:getUnit():getPosition().p
+function getCloseGroupCratesByDistance(unitPoint)
+	env.info("getAllGroupCratesByDistanc")
+	local completeGroupCrateList = {}
+	for index,crateGroup  in pairs(CrateGroupList) do
+		--local crateListGroup = crateGroup:getCratePositions()
+		env.info("indexGroup " .. index )
+		for _,crate in pairs(crateGroup.groupUnit) do
+			env.info("checking " )
+			env.info("checking " .. crate.unitName)
+			local position = crate:getCratePosition()
+			env.info("checking " .. position.x .. " unit " .. unitPoint.x)
+			local distance = getDistancePoint(unitPoint, position)
+			if distance < 50 then
+				env.info("checking " .. distance)
+				if completeGroupCrateList[index] == nil then
+					table.insert(completeGroupCrateList,index,crateGroup)
+				--else if ()
+				end
+			end
+		end
+	end
+	env.info("getAllGroupCratesByDistance end " .. table.maxn(completeGroupCrateList))
+	return completeGroupCrateList
 end
 
 function CrateGroupClass:unpackGroup()
