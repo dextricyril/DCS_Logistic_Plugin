@@ -649,6 +649,16 @@ end
 
 function CrateClass:getCratePosition()
 	env.info("getCratePosition")
+	env.info("getCratePosition " .. self.unitName) 
+	if( self.crateObject == nil ) then
+		env.info("NIL FOR " .. self.unitName)
+		return nil
+	end
+	env.info("getCratePosition " .. tostring(self.crateObject:isExist()))
+	if( self.crateObject:isExist() == false) then
+		env.info(" Not exists FOR " .. self.unitName)
+		return nil
+	end
 	local position = self.crateObject:getPosition().p
 	env.info("getCratePosition end")
 	return position
@@ -657,7 +667,11 @@ end
 -- remove the crate and return the unit information
 function CrateClass:unpackUnit_destroyCase()
 	env.info("unpackUnit")
-	position = self.crateObject:getPosition().p
+	--if crate doesn't exist position null
+	position = self:getCratePosition()
+	if position == nil then
+		return nil
+	end
 	env.info("unpackUnit coord " .. position.x .."   Z" .. position.z)
 	self.crateObject:destroy()
 	
@@ -748,14 +762,17 @@ function getCloseGroupCratesByDistance(unitPoint)
 			for _,crate in pairs(crateGroup.groupUnit) do
 				env.info("checking " )
 				env.info("checking " .. crate.unitName)
+				
 				local position = crate:getCratePosition()
-				env.info("checking " .. position.x .. " unit " .. unitPoint.x)
-				local distance = getDistancePoint(unitPoint, position)
-				if distance < 50 then
-					env.info("checking " .. distance)
-					if completeGroupCrateList[index] == nil then
-						table.insert(completeGroupCrateList,index,crateGroup)
-					--else if ()
+				if (position ~= nil) then
+					env.info("checking " .. position.x .. " unit " .. unitPoint.x)
+					local distance = getDistancePoint(unitPoint, position)
+					if distance < 50 then
+						env.info("checking " .. distance)
+						if completeGroupCrateList[index] == nil then
+							table.insert(completeGroupCrateList,index,crateGroup)
+						--else if ()
+						end
 					end
 				end
 			end
@@ -796,7 +813,9 @@ function CrateGroupClass:unpackGroup()
 	for num,unit in pairs(self.groupUnit) do
 		env.info("unpack " .. tostring(num))
 		local unitInfo = unit:unpackUnit_destroyCase()
-		table.insert(groupData["units"], unitInfo)
+		if (unitInfo ~= nil) then
+			table.insert(groupData["units"], unitInfo)
+		end
    end
 
 	groupData["x"] = groupData["units"]["x"]
